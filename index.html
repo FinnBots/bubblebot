@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<title>MorriBoT — a FinnBots game</title>
+<title>BubbleBot — a FinnBots game</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jersey+15&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
@@ -120,7 +120,7 @@
   .panel .ghostbtn:last-child{margin-bottom:0}
   @media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} }
 
-  /* MorriBoT: two-thumb rail — move under the left thumb, BUBBLE + JUMP under the
+  /* BubbleBot: two-thumb rail — move under the left thumb, BUBBLE + JUMP under the
      right, max separation so both are reachable one-handed-per-side on a phone. */
   .controls.twothumb{ width:100%; max-width:560px; margin:0 auto; display:flex;
     justify-content:space-between; align-items:center; gap:10px; }
@@ -386,7 +386,7 @@ canvas{ touch-action:none; }
      on a landscape phone is height-bound, so the width either side of it is dead
      space — and that dead space is exactly where the thumbs already are. Taking
      the control row out of the column gives the canvas the full height instead:
-     MorriBoT went 306x245 -> 394x345 on a 812x375 phone, +81% of play area.
+     BubbleBot went 306x245 -> 394x345 on a 812x375 phone, +81% of play area.
      Movement stays under the left thumb, action under the right. */
   .controls[class]{
     position:fixed; inset:0; z-index:30; margin:0; max-width:none;
@@ -436,7 +436,7 @@ canvas{ touch-action:none; }
   <div class="wrap">
     <header class="topbar">
       <!--fb:title--><a class="fb-mark" href="https://games.finnstergram.com" aria-label="FinnBots — more games"><svg class="fb-bot" viewBox="0 0 28 28" aria-hidden="true" focusable="false"><path d="M14 5.4V3.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="14" cy="2" r="1.85" fill="var(--fb-amber)"/><rect x="1" y="11" width="2.6" height="6" rx="1.3" fill="currentColor"/><rect x="24.4" y="11" width="2.6" height="6" rx="1.3" fill="currentColor"/><rect x="3.6" y="5" width="20.8" height="18" rx="5.5" fill="currentColor"/><rect x="6.6" y="8.6" width="14.8" height="9.4" rx="2.6" fill="var(--fb-screen)"/><circle cx="10.7" cy="13.3" r="1.9" fill="var(--fb-amber)"/><circle cx="17.3" cy="13.3" r="1.9" fill="var(--fb-amber)"/></svg><span class="fb-word">FINN<i>BOTS</i></span></a><!--/fb-->
-      <h1 class="title">MORRIBOT</h1>
+      <h1 class="title">BUBBLEBOT</h1>
       <div class="modebar" role="tablist" aria-label="Play mode">
         <button class="modepill active" id="modeFree" type="button" role="tab">Free</button>
         <button class="modepill" id="modePaid" type="button" role="tab">Paid · 25</button>
@@ -468,7 +468,7 @@ canvas{ touch-action:none; }
     </div>
 
     <main class="surface">
-      <canvas id="game" width="256" height="224" aria-label="MorriBoT play area."></canvas>
+      <canvas id="game" width="256" height="224" aria-label="BubbleBot play area."></canvas>
     </main>
 
     <div class="controls twothumb" aria-label="Controls">
@@ -487,7 +487,7 @@ canvas{ touch-action:none; }
       <div class="links">
         <a href="https://magiceden.io/marketplace/finnbot" target="_blank" rel="noopener">Buy a Bot</a>·
         <a href="https://games.finnstergram.com/" target="_blank" rel="noopener">More games</a>·
-        <a href="https://morribot.finnstergram.com/leaderboard.html" target="_blank" rel="noopener">Leaderboard</a>
+        <a href="https://bubblebot.finnstergram.com/leaderboard.html" target="_blank" rel="noopener">Leaderboard</a>
       </div>
     </footer>
   </div>
@@ -510,7 +510,7 @@ canvas{ touch-action:none; }
       <div class="lnks">
         <a href="https://magiceden.io/marketplace/finnbot" target="_blank" rel="noopener">Buy a Bot</a>·
         <a href="https://games.finnstergram.com/" target="_blank" rel="noopener">More games</a>·
-        <a href="https://morribot.finnstergram.com/leaderboard.html" target="_blank" rel="noopener">Leaderboard</a>
+        <a href="https://bubblebot.finnstergram.com/leaderboard.html" target="_blank" rel="noopener">Leaderboard</a>
       </div>
       <button class="btn" id="rulesClose">Got it</button>
     </div>
@@ -531,7 +531,7 @@ canvas{ touch-action:none; }
 
   <!-- Kid-safety confirm gate (before any wallet code runs) -->
   <div class="sheet" id="confirmSheet"><div class="panel">
-    <h2>Play MorriBoT — Paid</h2>
+    <h2>Play BubbleBot — Paid</h2>
     <p>One entry = one run. Costs <b>25 OIL</b> to the treasury (a sink). Pays nothing out — you're playing for a leaderboard spot. Bot holders: score ×1.5.<br/><br/>A <b>fun ranking</b> — not verified.</p>
     <button class="again" id="confirmEnter" type="button">Connect &amp; Pay</button>
     <button class="ghostbtn" id="confirmBack" type="button">Cancel</button>
@@ -541,22 +541,22 @@ canvas{ touch-action:none; }
   <div class="sheet" id="postedSheet"><div class="panel">
     <h2>Score posted!</h2>
     <p id="posted-text"></p>
-    <a class="ghostbtn" id="viewLb" href="https://morribot.finnstergram.com/leaderboard.html" target="_blank" rel="noopener">View leaderboard →</a>
+    <a class="ghostbtn" id="viewLb" href="https://bubblebot.finnstergram.com/leaderboard.html" target="_blank" rel="noopener">View leaderboard →</a>
     <button class="again" id="againBtn" type="button">Play again (25 OIL)</button>
   </div></div>
 
 <script>
 "use strict";
 /* ==========================================================================
-   MorriBoT — FinnBots.  ENGINE (Free gameplay).
+   BubbleBot — FinnBots.  ENGINE (Free gameplay).
    Bubble Bobble-loop: trap a bot in a bubble, pop the bubble, clear the round.
-   Arcade values are CONTRACT — see BRIEF-morribot.md for the researched table
+   Arcade values are CONTRACT — see BRIEF-bubblebot.md for the researched table
    and for the five constants that are OUR calibration (no source exists).
    Pure sim on `s`: no DOM, no RNG beyond the seeded rng, exported for the gates.
    ========================================================================== */
 
-const CFG = { name:'MorriBoT', memoNS:'MORB', chassis:'sink-leaderboard',
-              subdomain:'morribot.finnstergram.com', port:9027, hero:106, accent:'#3a6ff7', entryOIL:25, scorePost:1 };
+const CFG = { name:'BubbleBot', memoNS:'BUBB', chassis:'sink-leaderboard',
+              subdomain:'bubblebot.finnstergram.com', port:9027, hero:106, accent:'#3a6ff7', entryOIL:25, scorePost:1 };
 
 /* ---- geometry ---- */
 const TW=32, TH=25, TS=8;            // 32x25 tiles of 8px
@@ -1495,10 +1495,10 @@ if(!HEADLESS){
   function startRun(){ s=newRun(); active=true; prevPhase='play'; rulesO.classList.remove('show'); overO.classList.remove('show'); paidO.classList.remove('show'); }
   function idleForPaid(){ s=newRun(); active=false; }
   function resumeFree(){ s=newRun(); active=true; prevPhase='play'; overO.classList.remove('show'); }
-  window.MorriBoTEngine = { start:startRun, idle:idleForPaid, resumeFree:resumeFree, state:()=>s };
+  window.BubbleBotEngine = { start:startRun, idle:idleForPaid, resumeFree:resumeFree, state:()=>s };
   function endRun(){ active=false; syncHUD();
     const res={ score:s.score, round:s.round, pops:s.pops, timeMs:s.timeMs };
-    if(window.MorriBoTPaid && MorriBoTPaid.onRunEnd && MorriBoTPaid.onRunEnd(res)) return;
+    if(window.BubbleBotPaid && BubbleBotPaid.onRunEnd && BubbleBotPaid.onRunEnd(res)) return;
     showOver(); }
 
   let last=performance.now(), acc=0; const TICK=1000/60;
@@ -1528,11 +1528,11 @@ if(!HEADLESS){
   // NOTE: the score-memo SHAPE (buildScoreMemo + the result fields it carries: res.height/res.oil/...) is
   // per-game — change those to your run stats. Everything else in this layer stays byte-identical.
 /* ============================================================================
- * Bot Smash — Paid layer. MORB sink + fun leaderboard.
+ * Bot Smash — Paid layer. BUBB sink + fun leaderboard.
  * The wallet MECHANICS below (getProvider, fetchOilBalance, buildTransferIx,
  * buildMemoIx, confirmSignature, sendPayment, onConnect, resume) are LIFTED
  * VERBATIM from the live Mr Bot index.html (itself lifted from Bot Merge Rush)
- * — only CFG values, the MORB memo tag / pending key / sign marker, and the
+ * — only CFG values, the BUBB memo tag / pending key / sign marker, and the
  * score-memo shape change. The UI glue is Bot Smash's (single-run action game).
  * Bot Smash is real-time and UNREPLAYABLE. The leaderboard is a FUN RANKING +
  * an OIL SINK. It is NOT verified / provably fair. Records, does not verify.
@@ -1566,7 +1566,7 @@ if(!HEADLESS){
       TREASURY_TOKEN_ACCOUNT: '2ZBNMLZFfHCuZm9Lfc3b7ut296tRwGtapuXad7zSm1ED',
       ENTRY_FEE: 25, POST_FEE: 1, DECIMALS: 2
     };
-    var MEMO_TAG = 'MORB';
+    var MEMO_TAG = 'BUBB';
     var wallet = { pubkey:null, oil:0 };
     var inited=false, busy=false, entrySig=null, pendingResult=null;
     var connectBtn, walletStatus;
@@ -1597,7 +1597,7 @@ if(!HEADLESS){
     }
 
     // ---- payment (one signed SPL transfer + memo — verbatim from Rush/Mr Bot) ----
-    var PENDING_KEY='morb_pending_action';
+    var PENDING_KEY='bubb_pending_action';
     function savePending(a){ try{ localStorage.setItem(PENDING_KEY, JSON.stringify(a)); }catch(e){} }
     function loadPending(){ try{ var v=localStorage.getItem(PENDING_KEY); return v?JSON.parse(v):null; }catch(e){ return null; } }
     function clearPending(){ try{ localStorage.removeItem(PENDING_KEY); }catch(e){} }
@@ -1628,11 +1628,11 @@ if(!HEADLESS){
       tx.add(buildTransferIx(sourcePubkey,destPubkey,ownerPk,needBase), buildMemoIx(ownerPk,memoText));
       tx.feePayer=ownerPk; var latest=await connection.getLatestBlockhash(); tx.recentBlockhash=latest.blockhash;
       if(useMobile){
-        var pend={ action:action, owner:wallet.pubkey, marker:'morb_sign' };
+        var pend={ action:action, owner:wallet.pubkey, marker:'bubb_sign' };
         if(action==='score' && pendingResult){ pend.entrySig=entrySig; pend.score=pendingResult.score; pend.height=pendingResult.height; pend.oil=pendingResult.oil; pend.timeMs=pendingResult.timeMs; }
         savePending(pend); setStatus('Opening Phantom to approve\u2026');
         var unsigned=tx.serialize({ requireAllSignatures:false, verifySignatures:false });
-        PhantomMobile.signTransaction(unsigned, window.location.origin+window.location.pathname, 'morb_sign'); return null;
+        PhantomMobile.signTransaction(unsigned, window.location.origin+window.location.pathname, 'bubb_sign'); return null;
       }
       var signed=await provider.signTransaction(tx); setStatus('Sending payment\u2026');
       var rawSig=await connection.sendRawTransaction(signed.serialize(),{ skipPreflight:false }); setStatus('Payment sent \u2014 waiting for confirmation\u2026');
@@ -1640,7 +1640,7 @@ if(!HEADLESS){
       return rawSig; // base58 on-chain signature
     }
 
-    // ---- score memo (MORB — no seed, no move-log, no replay; records NOT verified) ----
+    // ---- score memo (BUBB — no seed, no move-log, no replay; records NOT verified) ----
     function buildScoreMemo(res){ return MEMO_TAG+'|score|sig='+String(entrySig).slice(0,32)+'|score='+res.score+'|height='+res.height+'|oil='+res.oil+'|time='+res.timeMs; }
 
     // ---- flow glue (Bot Smash: single-run action game) ---------------------
@@ -1652,7 +1652,7 @@ if(!HEADLESS){
 
     function onEntryConfirmed(sig){ entrySig=sig; busy=false; lockModeToggle(true);
       setStatus('Entry paid \u2014 good luck! Post your score after the run.', 'ok');
-      window.MorriBoTEngine.start(); }
+      window.BubbleBotEngine.start(); }
 
     // Called by the engine at game over. Returns true if this was a paid run (engine then skips its free overlay).
     function onRunEnd(res){
@@ -1732,7 +1732,7 @@ if(!HEADLESS){
       onPlay(); return true;
     }
 
-    function onAgain(){ $('postedSheet').classList.remove('show'); window.MorriBoTEngine.idle(); showPaidStart(); }
+    function onAgain(){ $('postedSheet').classList.remove('show'); window.BubbleBotEngine.idle(); showPaidStart(); }
 
     // ---- mobile redirect resume (verbatim from Rush/Mr Bot; carries waves/score/timeMs) --
     async function resume(){
@@ -1743,7 +1743,7 @@ if(!HEADLESS){
         return;
       }
       connectBtn.disabled=true; connectBtn.textContent='Finishing\u2026'; setStatus('Almost there \u2014 finishing up with Phantom\u2026');
-      var pending=loadPending(); var marker=pending?pending.marker:'morb_sign';
+      var pending=loadPending(); var marker=pending?pending.marker:'bubb_sign';
       var result=window.PhantomMobile?PhantomMobile.consumePendingRedirect(marker):null;
       if(result&&result.type==='connect'){ wallet.pubkey=result.publicKey; connectBtn.textContent='Connected';
         setStatus('Connected as <span class="addr">'+shortAddr(wallet.pubkey)+'</span><br/>Checking your $OIL balance\u2026'); checkBalance(wallet.pubkey); return; }
@@ -1773,7 +1773,7 @@ if(!HEADLESS){
              showPaidStart:showPaidStart, hasSession:function(){ return window.PhantomMobile && PhantomMobile.hasSession(); } };
   })();
 
-  window.MorriBoTPaid = Paid;
+  window.BubbleBotPaid = Paid;
 
   // ===== Mode switching (kid-safety: Paid is a deliberate opt-in) ============
   var facts=$('facts');
@@ -1795,17 +1795,17 @@ if(!HEADLESS){
     }
   }
 
-  $('modeFree').addEventListener('click', function(){ if(mode==='free') return; setMode('free'); window.MorriBoTEngine.resumeFree(); });
+  $('modeFree').addEventListener('click', function(){ if(mode==='free') return; setMode('free'); window.BubbleBotEngine.resumeFree(); });
   $('modePaid').addEventListener('click', function(){ if(mode==='paid') return; confirmSheet.classList.add('show'); });
   $('confirmBack').addEventListener('click', function(){ confirmSheet.classList.remove('show'); });
-  $('confirmEnter').addEventListener('click', function(){ confirmSheet.classList.remove('show'); setMode('paid'); Paid.init(); window.MorriBoTEngine.idle(); Paid.showPaidStart(); if(Paid.hasSession && Paid.hasSession()) Paid.resume(); });
+  $('confirmEnter').addEventListener('click', function(){ confirmSheet.classList.remove('show'); setMode('paid'); Paid.init(); window.BubbleBotEngine.idle(); Paid.showPaidStart(); if(Paid.hasSession && Paid.hasSession()) Paid.resume(); });
 
   // ===== On load: Free by default. The wallet layer is only touched when returning
   // ===== from a Phantom redirect or already inside Phantom's browser (both of which
   // ===== can ONLY occur after the user opted into Paid). =====================
   (function boot(){
     var params=new URLSearchParams(window.location.search);
-    if(params.get('phantom_action') || params.get('src')==='browse'){ setMode('paid'); Paid.init(); window.MorriBoTEngine.idle(); Paid.showPaidStart(); Paid.resume(); }
+    if(params.get('phantom_action') || params.get('src')==='browse'){ setMode('paid'); Paid.init(); window.BubbleBotEngine.idle(); Paid.showPaidStart(); Paid.resume(); }
     else { setMode('free'); }
   })();
 })();
