@@ -549,7 +549,7 @@ canvas{ touch-action:none; }
 "use strict";
 /* ==========================================================================
    BubbleBot — FinnBots.  ENGINE (Free gameplay).
-   Bubble Bobble-loop: trap a bot in a bubble, pop the bubble, clear the round.
+   bubble-trap loop: trap a bot in a bubble, pop the bubble, clear the round.
    Arcade values are CONTRACT — see BRIEF-bubblebot.md for the researched table
    and for the five constants that are OUR calibration (no source exists).
    Pure sim on `s`: no DOM, no RNG beyond the seeded rng, exported for the gates.
@@ -1339,7 +1339,7 @@ if(!HEADLESS){
     ctx.textAlign=align||'left'; ctx.textBaseline='alphabetic';
     ctx.fillText(str, Math.round(x*S), Math.round(y*S)); ctx.textAlign='left';
   }
-  /* ARCADE PARITY (researched 2026-09-25): Bubble Bobble's background tiles are
+  /* ARCADE PARITY (researched 2026-09-25): the 1986 original's background tiles are
      8x8 and every character sprite is TWO tiles wide — 16x16. This cast was
      drawn at 12x12 (a quarter too small) while the hero was drawn at 22 (a third
      too big), so the hero loomed almost twice the area of a bot he is supposed to
