@@ -1,0 +1,1927 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>MorriBoT — a FinnBots game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jersey+15&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --plum:#5f4c57; --plum-deep:#3e323a; --amber:#f2a03d; --electric:#3a6ff7;
+    --peach:#f5c8a0; --soft:#fdf3e7; --ink:#3e323a; --muted:#8a7a82; --red:#c0392b;
+    --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s6:24px;
+    --r-sm:8px; --r-md:12px; --r-lg:16px; --r-xl:22px;
+    --sh1:0 1px 2px rgba(62,50,58,.12); --sh2:0 4px 14px rgba(62,50,58,.16);
+    --disp:'Jersey 15',system-ui,sans-serif; --body:'Plus Jakarta Sans',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100dvh;overflow:hidden;margin:0}
+  body{ font-family:var(--body); color:var(--ink);
+    background:radial-gradient(120% 80% at 50% 0%, var(--soft), var(--peach));
+    -webkit-font-smoothing:antialiased; user-select:none; -webkit-user-select:none; touch-action:none; }
+  /* ===== GAME-FIRST LAYOUT: the canvas owns the viewport; chrome is one slim bar =====
+     (Folded back from BOTMAN, 2026-09-19 — every game maximises the play area.) */
+  .wrap{height:100%;max-width:1400px;margin:0 auto;display:flex;flex-direction:column;padding:var(--s2) var(--s1) var(--s1);gap:var(--s1)}
+  .topbar{display:flex;align-items:center;gap:var(--s2);min-height:32px;flex:none}
+  .pill{font-family:var(--disp);font-size:15px;letter-spacing:.5px;color:#fff;background:var(--plum);padding:2px var(--s3);border-radius:999px;box-shadow:var(--sh1);white-space:nowrap}
+  .title{font-family:var(--disp);font-size:22px;line-height:1;color:var(--plum-deep);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .iconbtn{appearance:none;border:0;background:#fff;color:var(--plum);width:30px;height:30px;border-radius:50%;font-family:var(--disp);font-size:17px;box-shadow:var(--sh1);cursor:pointer;flex:none}
+  .iconbtn:focus-visible{outline:3px solid var(--electric);outline-offset:2px}
+  .modebar{display:flex;gap:2px;background:rgba(255,255,255,.55);border-radius:999px;padding:2px;box-shadow:var(--sh1);flex:none}
+  .modepill{appearance:none;border:0;cursor:pointer;font-family:var(--disp);font-size:12.5px;padding:4px 11px;border-radius:999px;background:transparent;color:var(--muted);white-space:nowrap}
+  .modepill.active{background:var(--amber);color:var(--plum-deep)}
+  .modepill:disabled{opacity:.5;cursor:default}
+  .modepill:focus-visible{outline:2px solid var(--electric);outline-offset:2px}
+  .testBanner{background:var(--amber);color:#4a2c10;font-weight:700;text-align:center;font-size:11.5px;padding:4px 10px;border-radius:var(--r-md);flex:none}
+  .testBanner.hidden{display:none}
+  .walletbar{display:none;flex-direction:column;gap:5px;background:rgba(255,255,255,.6);border-radius:var(--r-md);padding:7px var(--s3);box-shadow:var(--sh1);flex:none}
+  body.mode-paid .walletbar{display:flex}
+  .walletrow{display:flex;align-items:center;gap:8px}
+  .walletrow .lbl{font-size:12px;color:var(--plum-deep);flex:1;line-height:1.3}
+  .connect-btn{appearance:none;border:0;cursor:pointer;font-family:var(--disp);font-size:14px;background:var(--plum);color:#fff;padding:6px 16px;border-radius:999px;box-shadow:var(--sh1)}
+  .connect-btn:disabled{opacity:.6;cursor:default}
+  .wallet-status{font-size:12px;color:var(--muted);line-height:1.35}
+  .wallet-status.hidden{display:none}
+  .wallet-status.ok{color:var(--plum-deep)} .wallet-status.warn{color:var(--red)}
+  .wallet-status .addr{font-family:ui-monospace,monospace;color:var(--plum)}
+  /* facts: hidden in Free (the How-To carries the message); slim safety line only in Paid */
+  .facts{display:none;font-size:11.5px;color:var(--plum-deep);background:rgba(255,255,255,.6);border-radius:var(--r-md);padding:4px var(--s3);text-align:center;align-items:center;justify-content:center;gap:8px;box-shadow:var(--sh1);flex:none}
+  body.mode-paid .facts{display:flex}
+  .facts b{font-weight:700}
+  .dot-sep{opacity:.4}
+  /* Slim HUD row (SCORE / TIME / LIVES). If your game draws its OWN in-canvas HUD (like BOTMAN),
+     hide this to reclaim the row for even more canvas:  .hud{display:none}  */
+  .hud{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--s2) var(--s3);font-family:var(--disp);color:var(--plum-deep);background:rgba(255,255,255,.55);border-radius:var(--r-md);padding:3px var(--s4);min-height:26px;box-shadow:var(--sh1);flex:none}
+  .hud .lab{font-size:10px;color:var(--muted);letter-spacing:1px}
+  .hud .val{font-size:16px;line-height:1}
+  .hud .val.warn{color:var(--red)}
+  .lives{display:inline-flex;gap:4px;align-items:center}
+  .life{width:9px;height:9px;border-radius:50%;background:var(--amber);box-shadow:var(--sh1)}
+  .life.off{background:rgba(0,0,0,.14);box-shadow:none}
+  /* the play surface eats ALL remaining space; the canvas maxes inside it (JS letterboxes) */
+  .surface{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;padding:2px 0}
+  /* Canvas fit — fills the surface, letterboxed by fitCanvas. Tune aspect-ratio to your game (portrait 224/288, landscape 3/2). */
+  canvas{ width:100%;height:auto;max-width:100%;max-height:100%;aspect-ratio:8/7;background:#20150f;border-radius:var(--r-lg);box-shadow:var(--sh2);image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none; }
+  .controls{display:flex;gap:var(--s4);align-items:center;justify-content:center;flex:none;padding:2px 0}
+  .dpad{display:grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(3,42px);gap:5px}
+  .ctl{appearance:none;border:0;cursor:pointer;font-family:var(--disp);font-size:20px;color:var(--plum-deep);background:rgba(255,255,255,.9);border-radius:var(--r-sm);box-shadow:var(--sh1);touch-action:none;user-select:none;-webkit-user-select:none;display:flex;align-items:center;justify-content:center}
+  .ctl:active,.ctl.on{transform:translateY(1px);background:var(--amber)}
+  .ctl:focus-visible{outline:3px solid var(--electric);outline-offset:2px}
+  .ctl.fire{font-size:13px;color:#fff;background:var(--plum)}
+  .ctl.fire:active,.ctl.fire.on{background:var(--plum-deep)}
+  #padU{grid-area:1/2/2/3} #padL{grid-area:2/1/3/2} #padFire{grid-area:2/2/3/3} #padR{grid-area:2/3/3/4} #padD{grid-area:3/2/4/3}
+  /* footer retired to reclaim the row — its links live in the How-To overlay (.lnks) */
+  .foot{display:none}
+  @media (min-height:720px){ .dpad{grid-template-columns:repeat(3,54px);grid-template-rows:repeat(3,46px)} }
+  @media (pointer:fine){ .controls{opacity:.92} }
+  /* ===== ORIENTATION-AWARE PLAY AREA (JS adds body.is-portrait / .is-landscape from the canvas aspect) =====
+     LANDSCAPE games are width-bound → the 1400px .wrap already grows them; nothing extra needed.
+     PORTRAIT games are height-bound → the ONLY way to enlarge the canvas is to reclaim vertical chrome,
+     so trim padding/title/controls and drop the Free-mode facts line. Keeps d-pad ≥44px (tappable). */
+  body.is-portrait .wrap{padding-top:4px;padding-bottom:4px;gap:4px}
+  body.is-portrait:not(.mode-paid) .facts{display:none}
+  body.is-portrait .topbar{min-height:0}
+  body.is-portrait .title{font-size:18px}
+  body.is-portrait .controls{padding:2px 0}
+  /* d-pad control cluster hugs its content (centered pill), not a full-width empty bar.
+     :has(.dpad) leaves two-thumb / canvas-only control rows (which span on purpose) alone. */
+  body.is-portrait .controls:has(.dpad){align-self:center;width:auto;padding:6px 18px}
+  body.is-portrait .dpad{grid-template-columns:repeat(3,48px);grid-template-rows:repeat(3,38px)}
+  @media (min-height:720px){ body.is-portrait .dpad{grid-template-columns:repeat(3,48px);grid-template-rows:repeat(3,40px)} }
+  .overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(42,34,48,.55);backdrop-filter:blur(2px);padding:var(--s4);z-index:20}
+  .overlay.show{display:flex}
+  body.mode-paid .modebar,body.mode-paid .walletbar{position:relative;z-index:21}
+  .card{background:var(--soft);border-radius:var(--r-xl);box-shadow:var(--sh2);max-width:380px;width:100%;padding:var(--s6);text-align:center}
+  .card h2{font-family:var(--disp);font-size:30px;margin:0 0 var(--s2);color:var(--plum-deep)}
+  .card.win h2{color:var(--amber)}
+  .card p{font-size:13.5px;line-height:1.5;margin:var(--s2) 0;color:var(--plum-deep)}
+  .card .big{font-family:var(--disp);font-size:22px;color:var(--plum-deep);margin:var(--s3) 0}
+  .card .big span{color:var(--amber)}
+  .btn{appearance:none;border:0;font-family:var(--disp);font-size:18px;color:#fff;background:var(--plum);padding:10px var(--s6);border-radius:999px;cursor:pointer;box-shadow:var(--sh1);margin-top:var(--s3)}
+  .btn:hover{background:var(--plum-deep)}
+  .btn:disabled{opacity:.5;cursor:default}
+  .btn:focus-visible{outline:3px solid var(--electric);outline-offset:2px}
+  .rules{text-align:left}
+  .rules li{font-size:13px;line-height:1.55;margin:5px 0}
+  .safe{font-size:11.5px;color:var(--muted);margin-top:var(--s3)}
+  .lnks{font-size:12.5px;margin-top:var(--s3)}
+  .lnks a{color:var(--plum);text-decoration:none;margin:0 6px;font-weight:600}
+  .lnks a:hover{text-decoration:underline}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+  .sheet{position:fixed;inset:0;background:rgba(42,34,48,.6);display:none;align-items:center;justify-content:center;padding:var(--s4);z-index:30}
+  .sheet.show{display:flex}
+  .panel{width:100%;max-width:340px;background:var(--soft);border-radius:var(--r-xl);padding:var(--s6);box-shadow:var(--sh2);text-align:center}
+  .panel h2{font-family:var(--disp);font-size:24px;margin:0 0 var(--s2);color:var(--plum-deep)}
+  .panel p{font-size:13px;color:var(--plum-deep);margin:0 0 var(--s4);line-height:1.5}
+  .panel .again{appearance:none;border:0;cursor:pointer;font-family:var(--disp);font-size:16px;background:var(--amber);color:#4a2c10;padding:11px var(--s6);border-radius:999px;display:block;width:100%;margin-bottom:var(--s2);box-shadow:var(--sh1)}
+  .panel .ghostbtn{appearance:none;border:1px solid rgba(95,76,87,.25);cursor:pointer;font-family:var(--body);font-weight:600;font-size:14px;background:transparent;color:var(--plum);padding:9px 18px;border-radius:999px;display:block;width:100%;box-sizing:border-box;text-decoration:none;margin-bottom:var(--s2)}
+  .panel .ghostbtn:last-child{margin-bottom:0}
+  @media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} }
+
+  /* MorriBoT: two-thumb rail — move under the left thumb, BUBBLE + JUMP under the
+     right, max separation so both are reachable one-handed-per-side on a phone. */
+  .controls.twothumb{ width:100%; max-width:560px; margin:0 auto; display:flex;
+    justify-content:space-between; align-items:center; gap:10px; }
+  .controls.twothumb .cluster{ display:flex; gap:10px; }
+  .controls.twothumb .ctl{ min-width:56px; min-height:56px; }
+  .controls.twothumb .ctl.fire{ border-radius:50%; width:64px; height:64px; font-size:11px; font-weight:800; }
+  .controls.twothumb .ctl.fire.jump{ background:linear-gradient(180deg,#f2a03d,#c9762a); color:#241017; }
+  .hud[hidden]{ display:none; }
+</style>
+<style id="fb-brand">
+/* ===== FINNBOTS BRAND LAYER v1 (2026-09-24) ==========================
+   Append-only override, injected as <style id="fb-brand"> AFTER every other
+   style block so it wins without editing a single line of a game's own CSS.
+   Three jobs:
+     1. BRAND  — the FinnBots lockup (bot mark + FINN/BOTS wordmark) in the topbar.
+     2. CABINET — the canvas reads as an arcade screen: bezel, amber rim light, glow.
+     3. THEME  — dark-mode parity with the hub (games.finnstergram.com adapts, the
+                 games did not, so hub -> game was a light/dark slap in the face).
+   Source of truth: factory/templates/brand-layer.css. Never hand-edit a game copy;
+   change it here and re-run apply-brand.sh. ==================================== */
+:root{
+  --fb-amber:#f2a03d; --fb-plum:#5f4c57; --fb-plum-deep:#3e323a;
+  --fb-screen:#241b28; --fb-bezel:#3e323a; --fb-rim:rgba(242,160,61,.45);
+  --fb-ink:#3e323a; --fb-surface:rgba(255,255,255,.55);
+}
+
+/* ---- 1. BRAND LOCKUP --------------------------------------------------- */
+.fb-mark{
+  display:inline-flex; align-items:center; gap:6px; flex:none;
+  text-decoration:none; color:var(--fb-plum); line-height:1;
+  padding:2px 4px; border-radius:999px; -webkit-tap-highlight-color:transparent;
+}
+.fb-mark:hover{ color:var(--fb-plum-deep); }
+.fb-mark:focus-visible{ outline:3px solid var(--electric,#3a6ff7); outline-offset:2px; }
+.fb-bot{ width:22px; height:22px; flex:none; display:block; }
+.fb-word{
+  font-family:var(--disp,'Jersey 15',system-ui,sans-serif);
+  font-size:16px; letter-spacing:.5px; color:currentColor; white-space:nowrap;
+}
+.fb-word i{ font-style:normal; color:var(--fb-amber); }
+/* Phones: the topbar also carries the mode pills + icon buttons, so drop the
+   wordmark and keep the bot mark rather than letting the row overflow. */
+@media (max-width:430px){ .fb-word{ display:none; } }
+body.is-portrait .fb-bot{ width:20px; height:20px; }
+
+/* ---- 2. CABINET ------------------------------------------------------- */
+/* Rings are box-shadow spread only: they paint OUTSIDE the box and never take
+   layout, so fitCanvas' letterbox maths is untouched. */
+canvas#game, canvas{
+  border-radius:12px;
+  box-shadow:
+    0 0 0 2px var(--fb-rim),
+    0 0 0 9px var(--fb-bezel),
+    0 0 0 10px rgba(0,0,0,.28),
+    0 16px 34px -8px rgba(62,50,58,.42),
+    0 0 58px -12px rgba(242,160,61,.40);
+}
+/* The surround needs room for the 10px of rings, or they clip at the viewport edge. */
+.surface{ padding:12px 12px !important; }
+body.is-portrait .surface{ padding:10px !important; }
+
+/* ---- 3. BRANDED BACKDROP (light) -------------------------------------- */
+/* Was a flat peach gradient on every game. Now: an amber glow pool behind the
+   cabinet over a faint plum blueprint grid — the FinnBots workshop floor. */
+body{
+  background:
+    radial-gradient(58% 42% at 50% 46%, rgba(242,160,61,.22), rgba(242,160,61,0) 72%),
+    repeating-linear-gradient(0deg,  rgba(95,76,87,.055) 0 1px, transparent 1px 40px),
+    repeating-linear-gradient(90deg, rgba(95,76,87,.055) 0 1px, transparent 1px 40px),
+    radial-gradient(120% 80% at 50% 0%, var(--soft,#fdf3e7), var(--peach,#f5c8a0));
+  background-attachment:fixed;
+}
+
+/* ---- 3b. LAYOUT PARITY --------------------------------------------------
+   Two chrome generations had drifted apart. The 7 newest games carry the mode
+   toggle as a compact pill pair in the topbar and hide the free-mode facts line
+   (the How-To overlay already carries that message) — the chassis' own
+   "game-first layout" rule. 8 older games still paint a full-width amber bar
+   plus a facts row, which looks like a different product and eats two rows of
+   play area. Pure CSS, no DOM change: `.wrap > .modebar` matches ONLY the
+   separate-row generation, because in the newer games the modebar sits inside
+   <header class="topbar"> and is therefore not a direct child of .wrap. */
+.wrap > .modebar{ align-self:center; width:auto; max-width:100%; }
+.wrap > .modebar .modepill{ flex:0 0 auto; font-size:12.5px; padding:4px 14px; }
+body:not(.mode-paid) .facts{ display:none; }
+/* Mr Bot EXEMPTION (Founder call, 2026-09-24). Every other game's free-mode line is
+   the same boilerplate ("Free to play · wallet-free · pays nothing"), which the How-To
+   overlay already says — so hiding it costs nothing. Mr Bot's carries GAMEPLAY hints
+   ("fetch the 3 parts · spray OIL to stun"), so hiding it loses information. `.app` is
+   Mr Bot's own wrapper and appears in no other game (checked across the roster); its
+   .facts declares no display of its own, so block is the original value.
+   `!important` is REQUIRED, not defensive: Mr Bot's OWN #pv-optimise block (2026-09-22
+   portrait pass) already carried `body:not(.mode-paid) .facts{display:none!important}` —
+   so that line had been hidden since long before the brand layer existed, and only an
+   !important at higher specificity can bring it back. */
+body:not(.mode-paid) .app .facts{ display:block !important; }
+
+/* ---- 4. DARK THEME — parity with the hub ------------------------------ */
+@media (prefers-color-scheme: dark){
+  :root{
+    --fb-ink:#f4eef2; --fb-surface:rgba(255,255,255,.075);
+    --soft:#2f2730; --peach:#221b20; --ink:#f4eef2;
+    --plum-deep:#f4eef2; --muted:#b9aab3;
+  }
+  body{
+    color:#f4eef2;
+    background:
+      radial-gradient(58% 42% at 50% 46%, rgba(242,160,61,.13), rgba(242,160,61,0) 72%),
+      repeating-linear-gradient(0deg,  rgba(255,255,255,.035) 0 1px, transparent 1px 40px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.035) 0 1px, transparent 1px 40px),
+      radial-gradient(120% 90% at 50% 0%, #2b2330, #1b151a);
+    background-attachment:fixed;
+  }
+  .fb-mark{ color:#f4eef2; }
+  .fb-mark:hover{ color:#fff; }
+  .title{ color:#f4eef2; }
+  .pill{ background:rgba(255,255,255,.12); color:#f4eef2; }
+  .iconbtn{ background:rgba(255,255,255,.12); color:#f4eef2; box-shadow:none; }
+  .modebar{ background:rgba(255,255,255,.075); box-shadow:none; }
+  .modepill{ color:#b9aab3; }
+  .modepill.active{ background:var(--fb-amber); color:#3a2a12; }
+  .hud{ background:rgba(255,255,255,.075); color:#f4eef2; box-shadow:none; }
+  .hud .lab{ color:#b9aab3; }
+  .facts, .walletbar{ background:rgba(255,255,255,.075); color:#f4eef2; box-shadow:none; }
+  .facts{ color:#e6dce2; }
+  .walletrow .lbl{ color:#e6dce2; }
+  .wallet-status{ color:#b9aab3; }
+  .wallet-status.ok{ color:#f4eef2; }
+  .ctl{ background:rgba(255,255,255,.13); color:#f4eef2; box-shadow:none; }
+  .ctl:active,.ctl.on{ background:var(--fb-amber); color:#3a2a12; }
+  .ctl.fire{ background:#6d5765; color:#fff; }
+  .ctl.fire:active,.ctl.fire.on{ background:var(--fb-amber); color:#3a2a12; }
+  .card, .panel{ background:#2f2730; color:#f4eef2; }
+  .card h2, .panel h2, .card .big{ color:#f4eef2; }
+  .card p, .panel p, .rules li{ color:#e6dce2; }
+  .safe{ color:#b9aab3; }
+  .lnks a{ color:var(--fb-amber); }
+  .btn{ background:rgba(255,255,255,.14); color:#f4eef2; }
+  .btn:hover{ background:rgba(255,255,255,.22); }
+  .panel .ghostbtn{ color:#f4eef2; border-color:rgba(255,255,255,.22); }
+  /* --- older-generation chrome the chassis classes don't cover -------------
+     Found by probing every game's computed styles in dark mode, not by eye:
+     4 games paint a white .controls pill, DRUM PUSH white .actbtn, BOTBURNER a
+     white stick pad, and Mr Bot (pre-chassis) its own .status/.footer/d-pad. */
+  .controls{ background:rgba(255,255,255,.06); box-shadow:none; }
+  .actbtn{ background:rgba(255,255,255,.13); color:#f4eef2; box-shadow:none; }
+  .actbtn.next{ background:#6d5765; color:#fff; }
+  /* the DISABLED next button is the white one — its own rule out-specifies .actbtn */
+  .actbtn.next:disabled{ background:rgba(255,255,255,.06); color:#8c7f88; }
+  .stickpad{ background:rgba(255,255,255,.10); }
+  .ctl.thrbtn{ background:rgba(255,255,255,.13); color:#f4eef2; }
+  .app .status{ background:rgba(255,255,255,.075); color:#c8bcc4; }
+  .app .footer{ background:transparent; }
+  .app .footer .tag{ color:var(--fb-amber); }
+  .app .footer a{ color:#b9aab3; }
+  .app .pad button, .app .up, .app .left, .app .down, .app .right{
+    background:rgba(255,255,255,.13); color:#f4eef2; box-shadow:none; }
+
+  canvas#game, canvas{
+    box-shadow:
+      0 0 0 2px rgba(242,160,61,.5),
+      0 0 0 9px #161119,
+      0 0 0 10px rgba(0,0,0,.5),
+      0 16px 34px -8px rgba(0,0,0,.6),
+      0 0 64px -10px rgba(242,160,61,.32);
+  }
+}
+</style>
+<style id="fb-device">
+/* ==========================================================================
+   FinnBots DEVICE LAYER — ONE scaling contract for laptop, tablet and phone.
+   Founder rule, 2026-09-25: "all games ... need to be playable on Laptops,
+   tablets and phones."
+
+   SOURCE OF TRUTH. Never hand-edit a game's copy — edit this file and re-run
+   apply-device.js across the roster (same discipline as brand-layer.css).
+
+   It is injected as the LAST <style> in <head>, AFTER the brand layer, so it
+   wins by source order and touches no existing CSS line. Everything below
+   section 3 assumes chassis markup; apply-device.js --safe stops before it for
+   the non-chassis games whose class names mean something else.
+
+   THE MODEL, in one line: the page is exactly one visible viewport tall, the
+   chrome is whatever is left after the play surface has taken what it needs,
+   and the controls are always reachable by the thumb that owns them.
+   ========================================================================== */
+
+/* ---- 1. the page fills the VISIBLE viewport ------------------------------
+   100vh on a phone is the viewport WITHOUT the browser's collapsing chrome:
+   a vh-sized column is taller than the screen, so the controls sit under the
+   address bar and the canvas is cut off. dvh tracks the real thing, and the
+   safe-area insets keep the notch and the home indicator off the buttons. */
+:root{
+  --fb-safe-t: env(safe-area-inset-top, 0px);
+  --fb-safe-b: env(safe-area-inset-bottom, 0px);
+  --fb-safe-l: env(safe-area-inset-left, 0px);
+  --fb-safe-r: env(safe-area-inset-right, 0px);
+  --fb-tap: 48px;                     /* 44 is the accessibility floor; 48 is comfortable */
+}
+html{ height:100%; }
+body{ min-height:100svh; overscroll-behavior:none; -webkit-text-size-adjust:100%; }
+@supports (height:100dvh){ body{ min-height:100dvh; } }
+
+/* ---- 2. touch behaviour -------------------------------------------------
+   Without these a double-tap on a control zooms the page, a long press pops a
+   selection bubble mid-game, and a drag on the canvas pulls the page to
+   refresh. All three are "the game is broken" to a player on a phone. */
+.ctl,.btn,.again,.ghostbtn,.modepill,.iconbtn,button{
+  touch-action:manipulation; -webkit-tap-highlight-color:transparent;
+  user-select:none; -webkit-user-select:none;
+}
+canvas{ touch-action:none; }
+
+/* ---- 3. hit targets on anything with a finger --------------------------- */
+@media (pointer:coarse){
+  .ctl{ min-width:var(--fb-tap); min-height:var(--fb-tap); }
+  .btn,.again,.ghostbtn{ min-height:var(--fb-tap); }
+  .modepill{ min-height:34px; }
+}
+
+/* ======================= chassis-only from here ========================== */
+
+/* ---- 4. the shell is one screen tall, insets respected ------------------- */
+.wrap{ min-height:100svh; padding-left:max(var(--fb-safe-l), 8px); padding-right:max(var(--fb-safe-r), 8px); }
+@supports (height:100dvh){ .wrap{ min-height:100dvh; } }
+.topbar{ padding-top:var(--fb-safe-t); }
+.controls{ padding-bottom:max(var(--fb-safe-b), 2px); }
+
+
+/* NOTE on the [class] attribute selectors below: a game's own rule for
+   `.controls.twothumb` is specificity (0,2,0) and beats a bare `.controls`
+   however late this file lands. `.controls[class]` is also (0,2,0), so source
+   order decides and the shared layer wins — which is the whole point of having
+   one. Prefer this to !important, which the roster has been bitten by before
+   (an old per-game override winning over a new shared rule, Mr Bot 2026-09-24). */
+
+/* ---- 5. PHONE, PORTRAIT — trim chrome, the canvas takes the rest --------- */
+@media (max-width:560px) and (orientation:portrait){
+  .foot{ display:none; }
+  .wrap{ padding-top:4px; gap:4px; }
+  .surface{ padding:0; }
+  .hud{ font-size:11px; padding:2px 8px; min-height:22px; }
+  .controls[class]{ gap:10px; }
+  .controls[class] .ctl{ min-width:54px; min-height:54px; }   /* thumbs, not cursors */
+  .controls[class] .ctl.fire{ width:64px; height:64px; }
+}
+
+/* ---- 6. PHONE, LANDSCAPE — the case that was actually unplayable ---------
+   A phone on its side has ~350px of height. The old column (topbar + facts +
+   hud + canvas + controls + footer) left the canvas a letterbox slit. Here the
+   chrome collapses to one thin line, the controls become a short rail, and the
+   play surface gets everything else. The HUD is kept but flattened — hiding it
+   would take the score away from the games that do not draw their own. */
+@media (orientation:landscape) and (max-height:560px){
+  .wrap{ padding:2px max(var(--fb-safe-r),6px) 2px max(var(--fb-safe-l),6px); gap:2px; }
+  .foot{ display:none; }
+  body:not(.mode-paid) .facts{ display:none; }
+  .topbar{ min-height:0; gap:6px; }
+  .title{ font-size:13px; }
+  .hud{ font-size:10px; padding:1px 6px; min-height:0; }
+  .surface{ padding:0; }
+  /* The controls move OUT OF FLOW into the side gutters. A portrait-ish canvas
+     on a landscape phone is height-bound, so the width either side of it is dead
+     space — and that dead space is exactly where the thumbs already are. Taking
+     the control row out of the column gives the canvas the full height instead:
+     MorriBoT went 306x245 -> 394x345 on a 812x375 phone, +81% of play area.
+     Movement stays under the left thumb, action under the right. */
+  .controls[class]{
+    position:fixed; inset:0; z-index:30; margin:0; max-width:none;
+    padding:0 max(var(--fb-safe-r),10px) calc(10px + var(--fb-safe-b)) max(var(--fb-safe-l),10px);
+    display:flex; align-items:flex-end; justify-content:space-between;
+    background:none; pointer-events:none;
+  }
+  .controls[class] > *{ pointer-events:auto; }
+  .controls[class] .ctl{ min-width:46px; min-height:46px; font-size:13px; }
+  .controls[class] .ctl.fire{ width:54px; height:54px; font-size:10px; }
+  .controls[class] .dpad .ctl{ min-width:42px; min-height:42px; }
+}
+
+/* ---- 7. TABLET — a bigger hand wants bigger keys ------------------------ */
+@media (min-width:700px) and (pointer:coarse){
+  .controls[class] .ctl{ min-width:62px; min-height:62px; }
+  .controls[class] .ctl.fire{ width:78px; height:78px; }
+  .controls[class]{ gap:16px; }
+}
+
+/* ---- 8. STICKINESS FURNITURE -------------------------------------------
+   Rendered by the fb-sticky script: a personal-best chip in the topbar and a
+   "what happened this run" line on the run-over card. No wallet, no network,
+   no engine change — it reads the score the game already prints. */
+.fb-best{
+  display:inline-flex; align-items:center; gap:5px; white-space:nowrap;
+  font:800 11px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  color:#f2a03d; background:rgba(242,160,61,.14);
+  border:1px solid rgba(242,160,61,.38); padding:4px 9px; border-radius:999px;
+}
+.fb-best i{ font-style:normal; opacity:.72; letter-spacing:.06em; }
+.fb-best b{ color:#fdf3e7; font-weight:800; }
+.fb-best.is-new{ color:#5fd6b4; background:rgba(95,214,180,.16); border-color:rgba(95,214,180,.45); }
+.fb-runline{ margin:8px 0 0; font:700 13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.fb-runline .go{ color:#5fd6b4; }
+.fb-runline .gap{ color:#f2a03d; }
+.fb-runline small{ display:block; font-weight:600; opacity:.7; font-size:11px; margin-top:3px; }
+/* On a phone the topbar is already lockup + title + mode pills + two icon
+   buttons; adding the chip pushed the game's own name out of its own bar. The
+   best score still appears where it actually drives a replay — the run-over
+   card — so the chip is a tablet-and-up affordance. */
+@media (max-width:620px){ .fb-best{ display:none; } }
+@media (orientation:landscape) and (max-height:560px){ .fb-best{ display:none; } }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <!--fb:title--><a class="fb-mark" href="https://games.finnstergram.com" aria-label="FinnBots — more games"><svg class="fb-bot" viewBox="0 0 28 28" aria-hidden="true" focusable="false"><path d="M14 5.4V3.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="14" cy="2" r="1.85" fill="var(--fb-amber)"/><rect x="1" y="11" width="2.6" height="6" rx="1.3" fill="currentColor"/><rect x="24.4" y="11" width="2.6" height="6" rx="1.3" fill="currentColor"/><rect x="3.6" y="5" width="20.8" height="18" rx="5.5" fill="currentColor"/><rect x="6.6" y="8.6" width="14.8" height="9.4" rx="2.6" fill="var(--fb-screen)"/><circle cx="10.7" cy="13.3" r="1.9" fill="var(--fb-amber)"/><circle cx="17.3" cy="13.3" r="1.9" fill="var(--fb-amber)"/></svg><span class="fb-word">FINN<i>BOTS</i></span></a><!--/fb-->
+      <h1 class="title">MORRIBOT</h1>
+      <div class="modebar" role="tablist" aria-label="Play mode">
+        <button class="modepill active" id="modeFree" type="button" role="tab">Free</button>
+        <button class="modepill" id="modePaid" type="button" role="tab">Paid · 25</button>
+      </div>
+      <button class="iconbtn" id="restartBtn" aria-label="Restart" title="Restart (R)">⟲</button>
+      <button class="iconbtn" id="infoBtn" aria-label="How to play">ⓘ</button>
+    </header>
+
+    <div class="testBanner hidden" id="testBanner">🧪 TEST MODE — local validator, fake $OIL. No real value moves.</div>
+
+    <div class="walletbar" id="walletbar">
+      <div class="walletrow">
+        <span class="lbl">Paid — 25 OIL entry · fun leaderboard, not verified</span>
+        <button class="connect-btn" id="connectBtn" type="button">Connect</button>
+      </div>
+      <div class="wallet-status hidden" id="walletStatus"></div>
+    </div>
+
+    <div class="facts" id="facts">
+      <span>Free to play</span><span class="dot-sep">·</span>
+      <span>wallet-free</span><span class="dot-sep">·</span>
+      <span><b>pays nothing</b></span>
+    </div>
+
+    <div class="hud" aria-live="polite" hidden>
+      <div><span class="lab">SCORE </span><span class="val" id="score">000000</span></div>
+      <div><span class="lab">TIME </span><span class="val" id="stat1">0</span></div>
+      <div><span class="lab">LIVES </span><span class="lives" id="lives"></span></div>
+    </div>
+
+    <main class="surface">
+      <canvas id="game" width="256" height="224" aria-label="MorriBoT play area."></canvas>
+    </main>
+
+    <div class="controls twothumb" aria-label="Controls">
+      <div class="cluster move">
+        <button class="ctl" id="padL" type="button" aria-label="Left">◀</button>
+        <button class="ctl" id="padR" type="button" aria-label="Right">▶</button>
+      </div>
+      <div class="cluster act">
+        <button class="ctl fire" id="padFire" type="button" aria-label="Blow a bubble">BUBBLE</button>
+        <button class="ctl fire jump" id="padJump" type="button" aria-label="Jump">JUMP</button>
+      </div>
+    </div>
+
+    <footer class="foot">
+      <div class="tag">a FinnBots game</div>
+      <div class="links">
+        <a href="https://magiceden.io/marketplace/finnbot" target="_blank" rel="noopener">Buy a Bot</a>·
+        <a href="https://games.finnstergram.com/" target="_blank" rel="noopener">More games</a>·
+        <a href="https://morribot.finnstergram.com/leaderboard.html" target="_blank" rel="noopener">Leaderboard</a>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Rules overlay (auto-opens as an intro on first load) -->
+  <div class="overlay" id="rulesOverlay" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+    <div class="card">
+      <h2 id="rulesTitle">HOW TO PLAY</h2>
+      <ul class="rules">
+        <li><b>Trap, then pop.</b> Blow a bubble over a bot to trap it, then touch the bubble to burst it. Pop <b>several at once</b> for 1,000 · 2,000 · 4,000 · 8,000 · 16,000…</li>
+        <li><b>Move</b> ◀ ▶ / arrows / A D. <b>BUBBLE</b> = Space or Z. <b>JUMP</b> = ▲ / W / X.</li>
+        <li><b>Ride a bubble:</b> hold JUMP as you land on one and you stand on it instead of bursting it — that is how you reach the high ledges.</li>
+        <li>Fall through the floor shafts and you come back in at the top.</li>
+        <li><b>E-X-T-E-N-D:</b> pop three or more bots at once and letter bubbles drift up the shafts. Collect all six for an <b>extra bot and a free round</b>.</li>
+        <li>Special bubbles: <b>water</b> floods, <b>lightning</b> cuts across, <b>fire</b> spreads along a platform. Only a pop of YOURS sets one off.</li>
+        <li>Take too long and it is <b>HURRY UP</b> — the bots turn angry, then the invincible <b>AUDITOR</b> comes for you. Clear fast and the round's food is worth more (up to 7,000).</li>
+        <li>3 bots. Extra ones at 30,000 · 100,000 · 400,000. 100 rounds, and the Foreman waits at the end.</li>
+      </ul>
+      <p class="safe">Free play never touches a wallet, never asks for a seed phrase, and never moves a Bot.</p>
+      <div class="lnks">
+        <a href="https://magiceden.io/marketplace/finnbot" target="_blank" rel="noopener">Buy a Bot</a>·
+        <a href="https://games.finnstergram.com/" target="_blank" rel="noopener">More games</a>·
+        <a href="https://morribot.finnstergram.com/leaderboard.html" target="_blank" rel="noopener">Leaderboard</a>
+      </div>
+      <button class="btn" id="rulesClose">Got it</button>
+    </div>
+  </div>
+
+  <!-- Game-over overlay (FREE) -->
+  <div class="overlay" id="overOverlay" role="dialog" aria-modal="true" aria-labelledby="overTitle">
+    <div class="card" id="overCard">
+      <h2 id="overTitle">RUN OVER</h2>
+      <div class="big">SCORE <span id="oScore">0</span></div>
+      <p>Time <b id="oTime">0:00</b></p>
+      <button class="btn" id="retryBtn">Tap to retry</button>
+    </div>
+  </div>
+
+  <!-- Paid overlay (start/run-over card; innerHTML written by the Paid controller) -->
+  <div class="overlay" id="paidOverlay" role="dialog" aria-modal="true"></div>
+
+  <!-- Kid-safety confirm gate (before any wallet code runs) -->
+  <div class="sheet" id="confirmSheet"><div class="panel">
+    <h2>Play MorriBoT — Paid</h2>
+    <p>One entry = one run. Costs <b>25 OIL</b> to the treasury (a sink). Pays nothing out — you're playing for a leaderboard spot. Bot holders: score ×1.5.<br/><br/>A <b>fun ranking</b> — not verified.</p>
+    <button class="again" id="confirmEnter" type="button">Connect &amp; Pay</button>
+    <button class="ghostbtn" id="confirmBack" type="button">Cancel</button>
+  </div></div>
+
+  <!-- Score-posted sheet -->
+  <div class="sheet" id="postedSheet"><div class="panel">
+    <h2>Score posted!</h2>
+    <p id="posted-text"></p>
+    <a class="ghostbtn" id="viewLb" href="https://morribot.finnstergram.com/leaderboard.html" target="_blank" rel="noopener">View leaderboard →</a>
+    <button class="again" id="againBtn" type="button">Play again (25 OIL)</button>
+  </div></div>
+
+<script>
+"use strict";
+/* ==========================================================================
+   MorriBoT — FinnBots.  ENGINE (Free gameplay).
+   Bubble Bobble-loop: trap a bot in a bubble, pop the bubble, clear the round.
+   Arcade values are CONTRACT — see BRIEF-morribot.md for the researched table
+   and for the five constants that are OUR calibration (no source exists).
+   Pure sim on `s`: no DOM, no RNG beyond the seeded rng, exported for the gates.
+   ========================================================================== */
+
+const CFG = { name:'MorriBoT', memoNS:'MORB', chassis:'sink-leaderboard',
+              subdomain:'morribot.finnstergram.com', port:9027, hero:106, accent:'#3a6ff7', entryOIL:25, scorePost:1 };
+
+/* ---- geometry ---- */
+const TW=32, TH=25, TS=8;            // 32x25 tiles of 8px
+const HUD_H=24;                      // in-canvas HUD ribbon (DOM .hud is hidden)
+const PW=12, PH=12;                  // player hitbox (narrower than a tile: test the LEADING EDGE)
+const RUN = { w:TW*TS, h:TH*TS+HUD_H };            // 256 x 224
+const FLOOR_ROW=TH-1, CEIL_ROW=0, PLAT_ROWS=[4,8,12,16,20];
+const WORLD_H=TH*TS;                 // 200 — play area below the ribbon
+
+/* ---- physics (px/s; CALIBRATED, see BRIEF §2) ---- */
+const GRAV=1116, JUMP_V=-312, MAXFALL=360, RUNSPD=66, SHOE_MULT=1.45;
+const RIDE_SINK=14;                  // how fast you sink while riding a bubble
+
+/* ---- bubbles (CALIBRATED) ---- */
+const B_TRAVEL_MS=420, B_SPD=200, B_SPD_FAST=280, B_RANGE_MULT=1.55;
+const B_RISE=26, B_LIFE_MS=14000, B_ESCAPE_MS=5500, B_R=8;   // 16px across = the arcade sprite
+const FIRE_CD=420, FIRE_CD_FAST=200;
+
+/* ---- arcade scoring table (CONTRACT) ---- */
+const POP_VALUE =[1000,2000,4000,8000,16000,32000,64000];
+const DROP_VALUE=[ 500,1000,2000,3000, 4000, 5000, 6000];
+const EXTEND_FOR=[   0,   0,   2,   3,    4,    5,    6];
+const WALL_POP=10;
+const EXTRA_LIFE_AT=[30000,100000,400000];
+const EXTEND_WORD=['E','X','T','E','N','D'];   // six DISTINCT letter bubbles
+const LETTERS=['E','X','T','E2','N','D'];
+
+/* food: the item a round spawns is set by how fast you cleared the LAST one.
+   sec 0 -> 7000 ... sec 29 -> 650 (arcade 1P Time table, 30 entries). */
+const FOOD_TIME=[7000,6000,6000,6000,5000,5000,5000,5000,4000,4000,4000,4000,3000,3000,3000,3000,
+                 2000,2000,2000,2000,1000,1000,1000,950,900,850,800,750,700,650];
+const FOOD_HURRY=[600,550,500,450,400,350,300,250,200,150];   // cleared after HURRY UP
+const FOOD_SKEL =[100,90,80,70,60,50,40,30,20,10];            // cleared after the Auditor
+
+/* ---- the cast (all-original FinnBots; arcade behaviour + first round) ---- */
+//  id  name       first  speed  freeze-kill value   kind
+const KINDS=[
+  {id:0,name:'COGBOT',  first:1,  spd:42, val:500,  kind:'walk'},
+  {id:1,name:'LOBBER',  first:6,  spd:42, val:2000, kind:'walk'},
+  {id:2,name:'PUFFER',  first:10, spd:46, val:5000, kind:'fly'},
+  {id:3,name:'WHIRLY',  first:20, spd:64, val:4000, kind:'fly'},
+  {id:4,name:'SPRINGER',first:30, spd:78, val:1000, kind:'bounce'},
+  {id:5,name:'BLAZER',  first:40, spd:58, val:3000, kind:'walk'},
+  {id:6,name:'CANNER',  first:50, spd:62, val:7000, kind:'walk'},
+  {id:7,name:'ZAPPER',  first:60, spd:86, val:6000, kind:'invader'}
+];
+const ANGRY_MULT=1.5;
+const ROUNDS_TOTAL=100, BOSS_ROUND=100, BOSS_HP=10;
+const LIVES_START=3, MAX_ENEMIES=7;
+
+/* HURRY UP, then the AUDITOR. Per-round arcade times are undocumented — see BRIEF §2. */
+function hurryMs(round){ if(round===BOSS_ROUND) return 1e9; return round<=40?30000: round<=70?25000:20000; }
+const SKEL_DELAY=10000;
+
+/* diamonds left by the special bubbles (arcade cross table ordering) */
+const DIA_WATER=7000, DIA_WATER_BUBBLED=6000, DIA_LIGHT=8000, DIA_FIRE=9000;
+
+/* ======================= deterministic round builder =======================
+   100 ORIGINAL FinnBots layouts. Never the arcade's level data — a seeded
+   grammar of mirrored platform rows, with two structural guarantees so a round
+   can never be born unreachable: every row overlaps the row below it, and every
+   row keeps a gap wide enough to drop through. verify-bubbles.js proves the rest. */
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+
+function hasShafts(round){ return (round%4)!==3; }   // ~75% of rounds carry the side shafts
+
+function buildRound(round){
+  const rng=mulberry32(0x4d4f5242 + round*2654435761);
+  const grid=new Uint8Array(TW*TH);
+  const set=(c,r,v)=>{ if(c>=0&&c<TW&&r>=0&&r<TH) grid[r*TW+c]=v; };
+  // border: side walls + ceiling + floor are SOLID BOTH WAYS (tile 2) so the
+  // only way through is a shaft — which is what makes the wrap a real decision.
+  for(let r=0;r<TH;r++){ set(0,r,2); set(TW-1,r,2); }
+  for(let c=0;c<TW;c++){ set(c,CEIL_ROW,2); set(c,FLOOR_ROW,2); }
+  const shafts=hasShafts(round);
+  if(shafts){ for(const c of [1,2,TW-3,TW-2]){ set(c,CEIL_ROW,0); set(c,FLOOR_ROW,0); } }
+
+  // platform rows, bottom-up, each overlapping the row below
+  let below=[[1,TW-2]];                       // the floor spans everything
+  const rows=[];
+  for(let i=PLAT_ROWS.length-1;i>=0;i--){
+    const r=PLAT_ROWS[i];
+    const mirror=rng()<0.55;
+    const segs=[];
+    // 1. the guaranteed anchor: sits above a segment of the row below
+    const anchor=below[(rng()*below.length)|0];
+    const aw=4+((rng()*8)|0);
+    let a0=Math.max(1,Math.min(TW-2-aw, anchor[0]+((rng()*Math.max(1,(anchor[1]-anchor[0]-aw+1)))|0)));
+    segs.push([a0,a0+aw-1]);
+    // 2. one or two more, mirrored for that arcade symmetry
+    const extra=1+((rng()*2)|0);
+    for(let k=0;k<extra;k++){
+      const w=4+((rng()*9)|0);
+      let c0=1+((rng()*(TW-2-w))|0);
+      if(mirror) c0=TW-1-(a0+aw-1)-(w-1)+ (k===0?0:((rng()*5)|0)-2);
+      c0=Math.max(1,Math.min(TW-1-w,c0));
+      segs.push([c0,c0+w-1]);
+    }
+    // 3. merge overlaps, then guarantee a >=3 wide gap to fall through
+    segs.sort((p,q)=>p[0]-q[0]);
+    const merged=[];
+    for(const sg of segs){ const last=merged[merged.length-1];
+      if(last && sg[0]<=last[1]+1) last[1]=Math.max(last[1],sg[1]); else merged.push(sg.slice()); }
+    let span=0; for(const sg of merged) span+=sg[1]-sg[0]+1;
+    if(span>TW-6){ const cut=merged[merged.length-1]; cut[1]=Math.max(cut[0]+2,cut[1]-4); }
+    // 4. EVERY segment must sit above one you can jump from — not just the
+    //    anchor. The mirrored extras used to land wherever, which stranded a
+    //    ledge on 11 of the 100 rounds: an enemy that wandered onto it could
+    //    never be bubbled and the round could never end. Shift, don't delete.
+    for(const sg of merged){
+      if(below.some(b=> sg[0]<=b[1] && sg[1]>=b[0])) continue;
+      const w=sg[1]-sg[0]+1; let best=below[0], bd=1e9;
+      for(const b of below){ const d=Math.abs((b[0]+b[1])/2-(sg[0]+sg[1])/2); if(d<bd){ bd=d; best=b; } }
+      const c0=Math.max(1,Math.min(TW-1-w, Math.round((best[0]+best[1])/2-w/2)));
+      sg[0]=c0; sg[1]=c0+w-1;
+    }
+    merged.sort((p,q)=>p[0]-q[0]);
+    for(let i=merged.length-1;i>0;i--) if(merged[i][0]<=merged[i-1][1]+1){
+      merged[i-1][1]=Math.max(merged[i-1][1],merged[i][1]); merged.splice(i,1); }
+    for(const sg of merged) for(let c=sg[0];c<=sg[1];c++) set(c,r,1);
+    rows.push({r,segs:merged});
+    below=merged;
+  }
+  rows.reverse();
+  return {round,grid,rows,shafts};
+}
+
+/* enemy roster for a round: the arcade's introduction schedule, counts rising */
+function rosterFor(round,rng){
+  const pool=KINDS.filter(k=>round>=k.first);
+  const n=Math.min(MAX_ENEMIES, 2+Math.floor(round/6));
+  const out=[];
+  for(let i=0;i<n;i++){
+    // bias toward the newest arrivals so a round FEELS like its era
+    const w=pool.map((k,j)=>1+j*0.6); const tot=w.reduce((a,b)=>a+b,0);
+    let t=rng()*tot, pick=pool[0];
+    for(let j=0;j<pool.length;j++){ t-=w[j]; if(t<=0){ pick=pool[j]; break; } }
+    out.push(pick.id);
+  }
+  return out;
+}
+
+/* ============================== collision =================================
+   Platforms (tile 1) are ONE-WAY: you rise through them and land on top.
+   Blocks (tile 2) are the border and are solid every way.  Every box-vs-tile
+   decision below tests the LEADING EDGE, never the centre — a 12px box
+   straddles the next column long before its middle crosses it. */
+function tileAt(s,c,r){ if(c<0||c>=TW) return 2;      // off the sides is WALL
+  if(r<0||r>=TH) return 0;                            // off the top/bottom is OPEN:
+  return s.grid[r*TW+c]; }                            // that is what makes the shaft warp work
+function wallSpan(s,x,y,w,h){                       // any tile-2 in the box?
+  const c0=Math.floor(x/TS), c1=Math.floor((x+w-1)/TS);
+  const r0=Math.floor(y/TS), r1=Math.floor((y+h-1)/TS);
+  for(let r=r0;r<=r1;r++) for(let c=c0;c<=c1;c++) if(tileAt(s,c,r)===2) return true;
+  return false;
+}
+function groundUnder(s,x,y,w,h){                    // top of the surface the box would land on
+  const r=Math.floor((y+h)/TS);
+  const c0=Math.floor(x/TS), c1=Math.floor((x+w-1)/TS);
+  for(let c=c0;c<=c1;c++){ const t=tileAt(s,c,r); if(t===1||t===2) return r*TS; }
+  return -1;
+}
+function supported(s,x,y,w,h){ return groundUnder(s,x,y-1,w,h)===Math.floor((y+h-1)/TS)*TS || onSurface(s,x,y,w,h); }
+function onSurface(s,x,y,w,h){
+  const r=Math.floor((y+h)/TS); if(Math.abs((y+h)-r*TS)>1.5) return false;
+  const c0=Math.floor(x/TS), c1=Math.floor((x+w-1)/TS);
+  for(let c=c0;c<=c1;c++){ const t=tileAt(s,c,r); if(t===1||t===2) return true; }
+  return false;
+}
+function wrapY(o,h){ if(o.y>=WORLD_H) o.y-=WORLD_H; else if(o.y+h<=0) o.y+=WORLD_H; }
+
+/* a box moves, honouring walls, one-way platforms and the vertical wrap */
+function moveBox(s,o,w,h,dt,gravity){
+  // --- horizontal ---
+  if(o.vx){ const nx=o.x+o.vx*dt;
+    if(wallSpan(s,nx,o.y,w,h)){ o.vx=-o.vx; o.bumpX=true; } else o.x=nx; }
+  // --- vertical ---
+  if(gravity){ o.vy=Math.min(MAXFALL,o.vy+gravity*dt); }
+  const ny=o.y+o.vy*dt;
+  if(o.vy>0){
+    const g=groundUnder(s,o.x,ny,w,h);
+    const wasAbove=(o.y+h)<=g+0.001;
+    if(g>=0 && wasAbove && ny+h>=g){ o.y=g-h; o.vy=0; o.onG=true; o.landed=true; }
+    else { o.y=ny; o.onG=false; }
+  } else if(o.vy<0){
+    if(wallSpan(s,o.x,ny,w,h)){ o.vy=0; } else { o.y=ny; o.onG=false; }
+  }
+  wrapY(o,h);
+}
+
+/* =============================== run state =============================== */
+function rnd(s){ s.seed=(s.seed+0x6D2B79F5)|0; let t=Math.imul(s.seed^s.seed>>>15,1|s.seed);
+  t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }
+
+function newRun(opt){
+  opt=opt||{};
+  const s={ phase:'play', st:'ready', stT:1200, score:0, lives:LIVES_START,
+    round:opt.round||1, timeMs:0, acc:0, seed:0x1a2b3c4d,
+    peaceful:!!opt.peaceful,                       // gates strip the cast; see verify-actors
+    px:0,py:0,vx:0,vy:0,dir:1,onG:false,ride:null,inv:0,stun:0,
+    inL:false,inR:false,inJump:false,inBub:false,_jp:false,_bp:false,fireCd:0,
+    bubbles:[],enemies:[],shots:[],items:[],waters:[],flames:[],bolts:[],fx:[],
+    roundMs:0,hurried:false,skel:null,boss:null,
+    letters:{},extendQ:0,extendShown:0,
+    pow:{range:false,speed:false,rate:false,shoes:false,ringJump:false,ringBub:false,ringMove:false,fire:0},
+    cnt:{blown:0,popped:0,jumps:0,cross:0,crossPx:0,water:0,light:0,fire:0,drown:0,food:0,special:0,point:0,umb:0,clock:0,candy:{p:0,y:0,b:0},skel:0,hurry:0},
+    tier:{candy:0,shoe:0,clock:0,umb:0,cross:0,lantern:0,heart:0},
+    freeze:0,heartT:0,pending:null,pendT:0,
+    lastSec:12,lastBand:0,nextLife:0,pops:0,cleared:0,best:0 };
+  loadRound(s,s.round);
+  return s;
+}
+
+function loadRound(s,round){
+  const L=buildRound(round);
+  s.grid=L.grid; s.rows=L.rows; s.shafts=L.shafts; s.round=round;
+  s.bubbles=[]; s.shots=[]; s.items=[]; s.waters=[]; s.flames=[]; s.bolts=[]; s.fx=[];
+  s.roundMs=0; s.hurried=false; s.skel=null; s.boss=null; s.specialT=1500;
+  s.enemies=[];
+  if(round===BOSS_ROUND){
+    s.boss={ x:RUN.w/2-16, y:40, vx:54, vy:44, hp:BOSS_HP, hit:0, cd:2200 };
+  } else if(!s.peaceful){
+    const rg=mulberry32(0x424f5453+round*40503);
+    const ids=rosterFor(round,rg);
+    const spots=[];
+    for(const row of s.rows) for(const sg of row.segs) spots.push([ (sg[0]+sg[1])/2*TS, row.r*TS ]);
+    for(let i=0;i<ids.length && spots.length;i++){
+      const k=KINDS[ids[i]];
+      const sp=spots[(rg()*spots.length)|0];
+      s.enemies.push(spawnEnemy(k.id, sp[0]+((rg()*16)|0)-8, sp[1]-14, rg()<0.5?-1:1));
+    }
+  }
+  // the round's food item — its value is what the LAST round's clear time earned
+  const band=s.lastBand, sec=Math.min(29,Math.max(0,s.lastSec|0));
+  const val = band===2 ? FOOD_SKEL[sec%10] : band===1 ? FOOD_HURRY[sec%10] : FOOD_TIME[sec];
+  const row=s.rows[(s.rows.length>>1)];
+  s.items.push({ x:RUN.w/2-4, y:row.r*TS-10, vy:0, val, kind:'food', t:0 });
+  // player starts bottom-left, the arcade's corner
+  s.px=24; s.py=(FLOOR_ROW-2)*TS; s.vx=0; s.vy=0; s.dir=1; s.onG=true; s.ride=null; s.inv=1200;
+}
+
+function spawnEnemy(id,x,y,dir){
+  const k=KINDS[id];
+  const e={ id, x, y, vx:dir*k.spd, vy:0, dir, angry:false, onG:false, cd:800+((id*137)%900),
+            kind:k.kind, t:0, flip:0 };
+  if(k.kind==='fly'){ e.vy=(dir>0?1:-1)*k.spd*0.7; }
+  return e;
+}
+
+/* ================================ scoring ================================= */
+function award(s,pts){
+  s.score+=pts;
+  while(s.nextLife<EXTRA_LIFE_AT.length && s.score>=EXTRA_LIFE_AT[s.nextLife]){ s.lives++; s.nextLife++; s._lifeFx=1; }
+}
+function dropItem(s,x,y,val,kind,eff){ s.items.push({x:Math.max(4,Math.min(RUN.w-12,x)),y,vy:0,val,kind:kind||'food',eff:eff||null,t:0}); }
+
+/* the hidden-goal layer: the arcade's power-up conditions, evaluated live.
+   Each tier fires once; the item then drifts in a moment later. */
+function checkPowerups(s){
+  const c=s.cnt, T=s.tier, P=(k,e)=>{ if(!s.pending){ s.pending={kind:k,eff:e}; s.pendT=900; } };
+  if(!s.pow.range && c.blown>=35) { s.pow._q1=1; P('candyP','range'); }
+  if(!s.pow.speed && c.popped>=35){ s.pow._q2=1; P('candyY','speed'); }
+  if(!s.pow.rate  && c.jumps>=35) { s.pow._q3=1; P('candyB','rate'); }
+  if(!s.pow.shoes && c.cross>=15) P('shoe','shoes');
+  if(T.clock<4 && c.light>=12*(T.clock+1)) { T.clock++; P('clock','clock'); }
+  const umbNeed=[15,20,25][Math.min(2,T.umb)];
+  if(T.umb<3 && c.water>=umbNeed){ T.umb++; P('umbrella','skip'+[3,5,7][T.umb-1]); }
+  if(c.candy.p>=3 && !s.pow.ringJump) P('ringJ','ringJump');
+  if(c.candy.y>=3 && !s.pow.ringBub)  P('ringB','ringBub');
+  if(c.candy.b>=3 && !s.pow.ringMove) P('ringM','ringMove');
+  if(T.cross<4 && c.special>=[10,11,12,13][T.cross]) { T.cross++; P('crossW','crossW'); }
+  if(T.cross>=1 && c.point>=[10,12,14,16][Math.min(3,T.cross-1)] && !s._crossL){ s._crossL=1; P('crossL','crossL'); }
+  if(c.drown>=[4,5,6,7][Math.min(3,T.cross)] && !s._crossF){ s._crossF=1; P('crossF','crossF'); }
+  if(T.lantern<4 && c.umb>=[1,1,2,2][T.lantern] && c.clock>=[1,2,3,4][T.lantern]){ T.lantern++; P('lantern','lantern'); }
+  if(T.heart<4 && c.food>=[50,55,60,65][T.heart]){ T.heart++; P('heart','heart'); }
+}
+
+function applyItem(s,it){
+  award(s,it.val);
+  if(it.kind==='food'||it.kind==='diamond'){ s.cnt.food++; s.cnt.point++; }
+  else s.cnt.special++;
+  switch(it.eff){
+    case 'range': s.pow.range=true; s.cnt.candy.p++; break;
+    case 'speed': s.pow.speed=true; s.cnt.candy.y++; break;
+    case 'rate':  s.pow.rate=true;  s.cnt.candy.b++; break;
+    case 'shoes': s.pow.shoes=true; break;
+    case 'clock': s.freeze=8000; s.cnt.clock++; break;
+    case 'skip3': case 'skip5': case 'skip7': s.cnt.umb++; s._skip=+it.eff.slice(4); s.st='clear'; s.stT=900; break;
+    case 'ringJump': s.pow.ringJump=true; break;
+    case 'ringBub':  s.pow.ringBub=true;  break;
+    case 'ringMove': s.pow.ringMove=true; break;
+    case 'crossW': screenKill(s,'water'); break;
+    case 'crossL': screenKill(s,'light'); break;
+    case 'crossF': s.pow.fire=5; break;                    // fire breath, five rounds
+    case 'lantern': s.pow.range=s.pow.speed=s.pow.rate=true; s.pow.ringJump=s.pow.ringBub=s.pow.ringMove=true; break;
+    case 'heart': s.heartT=10000; break;
+  }
+  checkPowerups(s);
+}
+function screenKill(s,how){
+  const val = how==='water'?DIA_WATER:DIA_LIGHT;
+  for(const e of s.enemies){ dropItem(s,e.x,8,val,'diamond'); award(s,val); }
+  s.enemies.length=0;
+  for(const b of s.bubbles) if(b.e>=0){ dropItem(s,b.x,8,DIA_WATER_BUBBLED,'diamond'); award(s,DIA_WATER_BUBBLED); }
+  s.bubbles=s.bubbles.filter(b=>b.e<0);
+}
+
+/* ============================== bubbles =================================== */
+function fireBubble(s){
+  if(s.fireCd>0||s.stun>0) return;
+  s.fireCd = s.pow.rate?FIRE_CD_FAST:FIRE_CD;
+  s.cnt.blown++; if(s.pow.ringBub) award(s,100);
+  const x=s.dir>0? s.px+PW+2 : s.px-10, y=s.py+2;
+  if(s.pow.fire>0){ s.shots.push({kind:'pfire',x,y,vx:s.dir*300,vy:0,t:0}); return; }
+  s.bubbles.push({ x, y, vx:s.dir*(s.pow.speed?B_SPD_FAST:B_SPD), t:0,
+                   travel:B_TRAVEL_MS*(s.pow.range?B_RANGE_MULT:1), state:'travel',
+                   e:-1, esc:0, life:0, sp:null, letter:null, ph:s.timeMs%1000 });
+  checkPowerups(s);
+}
+function bubbleOverlap(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return dx*dx+dy*dy <= (B_R*2+3)*(B_R*2+3); }
+function boxHit(ax,ay,aw,ah,bx,by,bw,bh){ return ax<bx+bw&&ax+aw>bx&&ay<by+bh&&ay+ah>by; }
+
+function popChain(s,idx,src){   // src: 'player' | 'wall' | 'life'
+  const seen=new Set([idx]), stack=[idx];
+  while(stack.length){ const i=stack.pop();
+    for(let j=0;j<s.bubbles.length;j++){ if(seen.has(j)) continue;
+      if(bubbleOverlap(s.bubbles[i],s.bubbles[j])){ seen.add(j); stack.push(j); } } }
+  const list=[...seen].map(i=>s.bubbles[i]);
+  const caught=list.filter(b=>b.e>=0);
+  let n=caught.length;
+  if(n>0){
+    const v=POP_VALUE[Math.min(n,POP_VALUE.length)-1];
+    award(s,v); s.fx.push({x:caught[0].x,y:caught[0].y,txt:String(v),t:900});
+    caught.forEach((b,k)=>dropItem(s,b.x-4,b.y,DROP_VALUE[Math.min(k,DROP_VALUE.length-1)],'food'));
+    const q=EXTEND_FOR[Math.min(n,EXTEND_FOR.length)-1];
+    if(q>0) s.extendQ+=q;
+    s.pops+=n;
+  }
+  const byPlayer = (src==='player'||src==='wall');
+  for(const b of list){
+    if(b.e<0){ s.cnt.popped++; if(src==='wall') award(s,WALL_POP); }
+    if(!byPlayer) continue;
+    if(b.sp==='water'){ s.cnt.water++; s.waters.push({x:b.x-10,y:b.y,w:20,vx:0,vy:170,mode:'fall',t:0,turns:0}); }
+    if(b.sp==='light'){ s.cnt.light++; s.bolts.push({x:b.x,y:b.y,vx:(s.dir>0?-1:1)*420,t:0}); }
+    if(b.sp==='fire') { s.cnt.fire++;  s.flames.push({x:b.x-4,y:b.y,vy:250,mode:'fall',w:8,t:0}); }
+    if(b.letter){ s.letters[b.letter]=true; award(s,100); }
+  }
+  s.bubbles=s.bubbles.filter((b,i)=>!seen.has(i));
+  checkPowerups(s);
+  if(LETTERS.every(L=>s.letters[L])){ s.lives++; s.letters={}; s.st='extend'; s.stT=1600; }
+}
+
+function stepBubbles(s,dt,dtMs){
+  for(let i=s.bubbles.length-1;i>=0;i--){
+    // popChain() REPLACES s.bubbles (filter) and can remove entries below i, so
+    // the index this reverse loop is holding may no longer exist. Same family as
+    // BOTBURNER's hitPlayer clearing the missile list mid-loop: re-read, and skip
+    // if the list moved under us.
+    if(i>=s.bubbles.length) continue;
+    const b=s.bubbles[i]; if(!b) continue; b.life+=dtMs;
+    if(b.state==='travel'){
+      b.t+=dtMs;
+      const nx=b.x+b.vx*dt;
+      if(wallSpan(s,nx-B_R,b.y-B_R,B_R*2,B_R*2)){ popChain(s,i,'wall'); continue; }
+      b.x=nx;
+      if(!s.peaceful) for(let j=0;j<s.enemies.length;j++){
+        const e=s.enemies[j];
+        if(boxHit(b.x-B_R,b.y-B_R,B_R*2,B_R*2, e.x,e.y,12,12)){
+          b.e=e.id; b.esc=B_ESCAPE_MS; b.state='trapped'; b.vx=0; s.enemies.splice(j,1); break; }
+      }
+      if(b.t>=b.travel){ b.state=b.e>=0?'trapped':'float'; b.vx=0; }
+    } else {
+      b.y-=B_RISE*dt; b.x+=Math.sin((s.timeMs+b.ph)/420)*0.25;
+      if(b.y<B_R+1) b.y=B_R+1;
+      if(b.e>=0){ b.esc-=dtMs;
+        if(b.esc<=0){ const e=spawnEnemy(b.e,b.x-6,b.y-6, rnd(s)<0.5?-1:1); e.angry=true; s.enemies.push(e); s.bubbles.splice(i,1); continue; } }
+      if(b.life>B_LIFE_MS){ popChain(s,i,'life'); continue; }
+    }
+  }
+  // special bubbles drift up out of the shafts — the arcade's supply line
+  if(s.shafts){ s.specialT-=dtMs;
+    if(s.specialT<=0){ s.specialT=2200+rnd(s)*900;
+      const col=(rnd(s)<0.5?1.5:TW-2.5)*TS;
+      const b={ x:col, y:WORLD_H-10, vx:0, t:0, travel:0, state:'float', e:-1, esc:0, life:0, sp:null, letter:null, ph:rnd(s)*1000 };
+      if(s.extendQ>0 && rnd(s)<0.55){ b.letter=LETTERS[(rnd(s)*6)|0]; s.extendQ--; }
+      else { const r=rnd(s); b.sp = r<0.45?null : r<0.65?'water' : r<0.80?'light':'fire'; }
+      s.bubbles.push(b);
+    } }
+}
+
+/* =============================== the cast ================================= */
+const EW=12, EH=12;
+function solidAllSpan(s,x,y,w,h){                  // flyers bounce off platforms too
+  const c0=Math.floor(x/TS), c1=Math.floor((x+w-1)/TS), r0=Math.floor(y/TS), r1=Math.floor((y+h-1)/TS);
+  for(let r=r0;r<=r1;r++) for(let c=c0;c<=c1;c++){ const t=tileAt(s,c,r); if(t===1||t===2) return true; }
+  return false;
+}
+function stepEnemies(s,dt,dtMs){
+  if(s.freeze>0||s.heartT>0) return;               // clock / heart freeze the cast
+  for(const e of s.enemies){
+    const k=KINDS[e.id], spd=k.spd*(e.angry?ANGRY_MULT:1);
+    e.t+=dtMs; e.cd-=dtMs;
+    if(k.kind==='fly'){
+      const nx=e.x+e.vx*dt; if(solidAllSpan(s,nx,e.y,EW,EH)) e.vx=-e.vx; else e.x=nx;
+      const ny=e.y+e.vy*dt; if(solidAllSpan(s,e.x,ny,EW,EH)) e.vy=-e.vy; else e.y=ny;
+      const m=Math.hypot(e.vx,e.vy)||1; e.vx=e.vx/m*spd; e.vy=e.vy/m*spd*0.8;
+      e.dir=e.vx<0?-1:1;
+      continue;
+    }
+    if(k.kind==='bounce'){
+      e.vx=e.dir*spd; moveBox(s,e,EW,EH,dt,GRAV);
+      if(e.bumpX){ e.dir=-e.dir; e.bumpX=false; }
+      if(e.landed){ e.landed=false; e.vy=-340; e.onG=false; }
+      continue;
+    }
+    // walkers + invader: a locomotion state must never have ZERO legal moves,
+    // and "can I go there" asks what HOLDS THE BOX UP at the LEADING EDGE.
+    e.vx=e.dir*spd;
+    const leadC=Math.floor(((e.dir>0? e.x+EW-1+2 : e.x-2))/TS);
+    const feetR=Math.floor((e.y+EH)/TS);
+    if(e.onG){
+      const ahead=tileAt(s,leadC,feetR), floorAhead=tileAt(s,leadC,feetR);
+      const blocked=(tileAt(s,leadC,feetR-1)===2);
+      const noFloor=!(floorAhead===1||floorAhead===2);
+      if(blocked) e.dir=-e.dir;
+      else if(noFloor && k.kind!=='invader'){
+        const jumper = e.id===0||e.id===6 ? 1 : e.id===1 ? 0.6 : 0.15;   // Blazer jumps poorly
+        if(rnd(s)<jumper){ e.vy=JUMP_V*(e.id===5?0.7:0.95); e.onG=false; }
+        else e.dir=-e.dir;
+      }
+      // a share of walkers HUNT: they pick the player's side when they land
+      if(e.landed){ e.landed=false;
+        const hunt = e.angry?0.7:Math.min(0.55,0.22+s.round*0.006);
+        if(rnd(s) < hunt) e.dir = (s.px>e.x?1:-1);
+        else if(rnd(s)<0.14 && e.id!==7){ e.vy=JUMP_V*0.9; e.onG=false; }
+      }
+    }
+    moveBox(s,e,EW,EH,dt,GRAV);
+    if(e.bumpX){ e.dir=-e.dir; e.bumpX=false; }
+    // attacks
+    if(e.cd<=0){
+      if(e.id===1){ e.cd=2600; s.shots.push({kind:'bolt',x:e.x+2,y:e.y+6,vx:e.dir*150,vy:0,t:0}); }
+      else if(e.id===5){ e.cd=2200; s.shots.push({kind:'flame',x:e.x+2,y:e.y+3,vx:e.dir*230,vy:0,t:0}); }
+      else if(e.id===6){ e.cd=2800; s.shots.push({kind:'can',x:e.x+2,y:e.y+2,vx:e.dir*190,vy:-40,t:0,back:false,ox:e.x}); }
+      else if(e.id===7){ e.cd=1800; s.shots.push({kind:'laser',x:e.x+5,y:e.y+EH,vx:0,vy:260,t:0}); }
+      else e.cd=1500+rnd(s)*1500;
+    }
+  }
+}
+function stepShots(s,dt,dtMs){
+  for(let i=s.shots.length-1;i>=0;i--){
+    const p=s.shots[i]; p.t+=dtMs;
+    if(p.kind==='bolt'){ p.vy=Math.min(MAXFALL,p.vy+GRAV*dt); }
+    if(p.kind==='can'){ if(!p.back && p.t>900){ p.back=true; p.vx=-p.vx; } p.vy+=10*dt; }
+    const nx=p.x+p.vx*dt, ny=p.y+(p.vy||0)*dt;
+    if(wallSpan(s,nx,ny,6,6)){
+      if(p.kind==='can'&&!p.back){ p.back=true; p.vx=-p.vx; } else { s.shots.splice(i,1); continue; }
+    } else { p.x=nx; p.y=ny; }
+    if(p.kind==='bolt'||p.kind==='laser'){ const g=groundUnder(s,p.x,p.y,6,6);
+      if(p.kind==='laser'&&g>=0&&p.y+6>=g){ s.shots.splice(i,1); continue; }
+      if(p.kind==='bolt'&&g>=0&&p.y+6>g){ p.y=g-6; p.vy=0; } }
+    if(p.t>3000||p.y>WORLD_H||p.y<-8){ s.shots.splice(i,1); continue; }
+    if(p.kind==='pfire'){                                   // the player's own fire breath
+      for(let j=s.enemies.length-1;j>=0;j--){ const e=s.enemies[j];
+        if(boxHit(p.x,p.y,8,6,e.x,e.y,EW,EH)){ award(s,DIA_FIRE); dropItem(s,e.x,e.y,DIA_FIRE,'diamond'); s.enemies.splice(j,1); s.shots.splice(i,1); break; } }
+    }
+  }
+}
+/* water sloshes down and runs along whatever it lands on; lightning cuts straight
+   through walls; fire drops to the platform below and spreads. */
+function stepSpecials(s,dt,dtMs){
+  for(let i=s.waters.length-1;i>=0;i--){
+    const w=s.waters[i]; w.t+=dtMs;
+    if(w.mode==='fall'){
+      w.y+=w.vy*dt;
+      const g=groundUnder(s,w.x,w.y,w.w,8);
+      if(g>=0&&w.y+8>=g){ w.y=g-8; w.mode='flow'; if(!w.split){ w.split=true; w.vx=130;
+          s.waters.push({x:w.x,y:w.y,w:w.w,vx:-130,vy:170,mode:'flow',t:0,turns:0,split:true}); } }
+      if(w.y>WORLD_H){ s.waters.splice(i,1); continue; }
+    } else {
+      w.x+=w.vx*dt;
+      if(wallSpan(s,w.x,w.y,w.w,8)){ w.vx=-w.vx; if(++w.turns>2){ s.waters.splice(i,1); continue; } }
+      if(!onSurface(s,w.x,w.y,w.w,8)) w.mode='fall';
+    }
+    if(w.t>5200){ s.waters.splice(i,1); continue; }
+    for(let j=s.enemies.length-1;j>=0;j--){ const e=s.enemies[j];
+      if(boxHit(w.x,w.y,w.w,8,e.x,e.y,EW,EH)){ award(s,DIA_WATER); dropItem(s,e.x,8,DIA_WATER,'diamond'); s.enemies.splice(j,1); s.cnt.drown++; checkPowerups(s); } }
+  }
+  for(let i=s.bolts.length-1;i>=0;i--){
+    const b=s.bolts[i]; b.t+=dtMs; b.x+=b.vx*dt;
+    if(b.x<-10||b.x>RUN.w+10||b.t>2000){ s.bolts.splice(i,1); continue; }
+    for(let j=s.enemies.length-1;j>=0;j--){ const e=s.enemies[j];
+      if(boxHit(b.x-6,b.y-3,12,6,e.x,e.y,EW,EH)){ award(s,DIA_LIGHT); dropItem(s,e.x,e.y,DIA_LIGHT,'diamond'); s.enemies.splice(j,1); } }
+    if(s.boss && boxHit(b.x-6,b.y-3,12,6,s.boss.x,s.boss.y,32,28)){ s.boss.hp--; s.boss.hit=300; s.bolts.splice(i,1); award(s,1000); continue; }
+  }
+  for(let i=s.flames.length-1;i>=0;i--){
+    const f=s.flames[i]; f.t+=dtMs;
+    if(f.mode==='fall'){ f.y+=f.vy*dt; const g=groundUnder(s,f.x,f.y,f.w,8);
+      if(g>=0&&f.y+8>=g){ f.y=g-8; f.mode='spread'; f.t=0; }
+      if(f.y>WORLD_H){ s.flames.splice(i,1); continue; } }
+    else { f.w=Math.min(52,8+f.t*0.05); f.x=Math.max(1,f.x-(f.w-8)*0.006);
+      if(f.t>3000){ s.flames.splice(i,1); continue; } }
+    for(let j=s.enemies.length-1;j>=0;j--){ const e=s.enemies[j];
+      if(boxHit(f.x,f.y,f.w,8,e.x,e.y,EW,EH)){ award(s,DIA_FIRE); dropItem(s,e.x,e.y,DIA_FIRE,'diamond'); s.enemies.splice(j,1); } }
+  }
+}
+function stepItems(s,dt,dtMs){
+  for(let i=s.items.length-1;i>=0;i--){
+    const it=s.items[i]; it.t+=dtMs;
+    it.vy=Math.min(MAXFALL,(it.vy||0)+GRAV*dt);
+    const ny=it.y+it.vy*dt, g=groundUnder(s,it.x,ny,8,8);
+    if(g>=0&&ny+8>=g&&it.y+8<=g+1){ it.y=g-8; it.vy=0; } else { it.y=ny; }
+    if(it.y>WORLD_H) it.y-=WORLD_H;
+    if(it.t>12000){ s.items.splice(i,1); continue; }
+    if(boxHit(it.x,it.y,8,8,s.px,s.py,PW,PH)){ applyItem(s,it); s.items.splice(i,1); }
+  }
+  if(s.pending){ s.pendT-=dtMs;
+    if(s.pendT<=0){ const row=s.rows[(rnd(s)*s.rows.length)|0], sg=row.segs[(rnd(s)*row.segs.length)|0];
+      dropItem(s,(sg[0]+sg[1])/2*TS,row.r*TS-12, s.pending.kind==='ringJ'||s.pending.kind==='ringB'||s.pending.kind==='ringM'?1000
+        : s.pending.kind==='lantern'?2000 : s.pending.kind[0]==='c'&&s.pending.kind[1]==='r'?3000
+        : s.pending.kind==='heart'?3000 : s.pending.kind==='clock'||s.pending.kind==='umbrella'?200:100,
+        s.pending.kind, s.pending.eff);
+      s.pending=null; } }
+}
+
+/* =============================== the player =============================== */
+function stepPlayer(s,dt,dtMs){
+  if(s.stun>0) s.stun-=dtMs;
+  if(s.inv>0)  s.inv-=dtMs;
+  if(s.fireCd>0) s.fireCd-=dtMs;
+  const spd=RUNSPD*(s.pow.shoes?SHOE_MULT:1);
+  let want=0; if(s.inL)want-=1; if(s.inR)want+=1;
+  if(s.stun>0) want=0;
+  if(want) s.dir=want;
+  s.vx=want*spd;
+  // riding a bubble: hold JUMP as you land on one and you stand on it instead of bursting it
+  if(s.ride){
+    const b=s.ride, live=s.bubbles.indexOf(b)>=0;
+    if(!live || !s.inJump){ s.ride=null; if(live) popChain(s,s.bubbles.indexOf(b),'player'); }
+    else { b.x+=s.vx*dt*0.45; s.px+=s.vx*dt; s.py=b.y-B_R-PH; s.vy=0; s.onG=true;
+           if(wallSpan(s,s.px,s.py,PW,PH)) s.px-=s.vx*dt; wrapY({y:s.py},PH); }
+  }
+  if(s.inJump && !s._jp && (s.onG||s.ride)){
+    s.vy=JUMP_V; s.onG=false; s.ride=null; s.cnt.jumps++;
+    if(s.pow.ringJump) award(s,500); checkPowerups(s);
+  }
+  s._jp=s.inJump;
+  if(s.inBub && !s._bp) fireBubble(s);
+  s._bp=s.inBub;
+  if(!s.ride){
+    const ox=s.px; const o={x:s.px,y:s.py,vx:s.vx,vy:s.vy,onG:s.onG,landed:false,bumpX:false};
+    moveBox(s,o,PW,PH,dt,GRAV);
+    s.px=o.x; s.py=o.y; s.vy=o.vy; s.onG=o.onG;
+    const moved=Math.abs(s.px-ox);
+    if(s.pow.ringMove) award(s,Math.round(moved*10));
+    s.cnt.crossPx+=moved; while(s.cnt.crossPx>=RUN.w){ s.cnt.crossPx-=RUN.w; s.cnt.cross++; checkPowerups(s); }
+    // touch a bubble: burst it (hold JUMP while dropping onto one to ride instead)
+    for(let i=s.bubbles.length-1;i>=0;i--){ const b=s.bubbles[i];
+      if(!boxHit(s.px,s.py,PW,PH,b.x-B_R,b.y-B_R,B_R*2,B_R*2)) continue;
+      // A bubble is born touching your mouth. Without this you burst every
+      // bubble on the frame you blow it and can never trap anything. An EMPTY
+      // travelling bubble is ignored for its first moments; one that has just
+      // CAUGHT a bot is not — that is the arcade's "kiss", a point-blank blow
+      // that traps and pops in one motion, and it stays available.
+      if(b.state==='travel' && b.e<0 && b.life<220) continue;
+      if(s.inJump && s.vy>0 && (s.py+PH)-(b.y-B_R) < 8){ s.ride=b; s.vy=0; s.py=b.y-B_R-PH; break; }
+      popChain(s,i,'player'); break;
+    }
+  }
+  // water carries you along; it never hurts
+  for(const w of s.waters) if(boxHit(s.px,s.py,PW,PH,w.x,w.y,w.w,8)){ s.py+=110*dt; s.px+=(w.vx||0)*dt*0.5; wrapY({y:s.py},PH); }
+}
+function killPlayer(s,ev){
+  if(s.inv>0||s.heartT>0||s.st!=='run') return;
+  s.lives--; s.st='die'; s.stT=1400; s.ride=null; ev.die=true;
+}
+function stepHazards(s,dt,dtMs,ev){
+  if(s.heartT>0){                       // frozen cast: touch to kill, at the table values
+    for(let i=s.enemies.length-1;i>=0;i--){ const e=s.enemies[i];
+      if(boxHit(s.px,s.py,PW,PH,e.x,e.y,EW,EH)){ const v=KINDS[e.id].val; award(s,v); dropItem(s,e.x,e.y,v,'food'); s.enemies.splice(i,1); } }
+  } else {
+    for(const e of s.enemies){
+      if(!boxHit(s.px,s.py,PW,PH,e.x,e.y,EW,EH)) continue;
+      if(s.inv>0){                      // respawn fairness: a bot standing on the
+        e.x += (e.x<s.px?-1:1)*1.6;     // spawn point is shoved clear instead of
+        e.dir = e.x<s.px?-1:1;          // camping there to kill you the tick your
+        continue;                       // invulnerability runs out
+      }
+      killPlayer(s,ev);
+    }
+  }
+  for(const p of s.shots) if(p.kind!=='pfire' && boxHit(s.px,s.py,PW,PH,p.x,p.y,6,6)) killPlayer(s,ev);
+  for(const b of s.bolts) if(boxHit(s.px,s.py,PW,PH,b.x-6,b.y-3,12,6)) s.stun=Math.max(s.stun,700);
+  for(const f of s.flames) if(f.mode==='spread'&&boxHit(s.px,s.py,PW,PH,f.x,f.y,f.w,8)) s.stun=Math.max(s.stun,700);
+  if(s.skel){
+    if(boxHit(s.px,s.py,PW,PH,s.skel.x,s.skel.y,14,12)){ if(s.inv>0) s.skel=null; else killPlayer(s,ev); }
+  }
+  if(s.boss && boxHit(s.px,s.py,PW,PH,s.boss.x,s.boss.y,32,28)) killPlayer(s,ev);
+}
+/* the AUDITOR — invincible, phases through everything, accelerates until the round ends */
+function stepSkel(s,dt,dtMs){
+  if(!s.hurried||s.boss) return;
+  if(!s.skel && s.roundMs>hurryMs(s.round)+SKEL_DELAY){ s.skel={x:RUN.w/2,y:8,spd:34}; s.cnt.skel++; checkPowerups(s); }
+  if(!s.skel) return;
+  const k=s.skel; k.spd=Math.min(120,k.spd+9*dt);
+  const dx=s.px-k.x, dy=s.py-k.y;
+  if(Math.abs(dx)>Math.abs(dy)) k.x+=Math.sign(dx)*k.spd*dt; else k.y+=Math.sign(dy)*k.spd*dt;
+}
+function stepBoss(s,dt,dtMs){
+  const b=s.boss; if(!b) return;
+  if(b.hit>0) b.hit-=dtMs;
+  b.x+=b.vx*dt; b.y+=b.vy*dt;
+  if(b.x<TS||b.x>RUN.w-TS-32) b.vx=-b.vx;
+  if(b.y<TS||b.y>WORLD_H-60)  b.vy=-b.vy;
+  b.cd-=dtMs;
+  if(b.cd<=0){ b.cd=2000;
+    for(let a=-2;a<=2;a++) s.shots.push({kind:'can',x:b.x+14,y:b.y+24,vx:a*90,vy:-60,t:0,back:true}); }
+  if(b.hp<=0){ award(s,50000); s.boss=null; }
+}
+
+/* ================================ stepGame ================================ */
+function stepGame(s,dtMs){
+  const ev={};
+  if(s.phase!=='play'){ s.acc=0; return ev; }
+  const dt=dtMs/1000;
+  s.timeMs+=dtMs;
+  if(s.st!=='run'){                       // ready / clear / die / extend beats (NOT in phase)
+    s.stT-=dtMs;
+    if(s.stT<=0){
+      if(s.st==='ready'){ s.st='run'; }
+      else if(s.st==='die'){
+        if(s.lives<=0){ s.phase='dead'; ev.over=true; }
+        else { s.px=24; s.py=(FLOOR_ROW-2)*TS; s.vx=s.vy=0; s.onG=true; s.inv=1600;
+               s.skel=null; s.roundMs=0; s.hurried=false; s.shots=[]; s.waters=[]; s.bolts=[]; s.flames=[];
+               for(const e of s.enemies) if(rnd(s)<0.5) e.angry=false;
+               s.st='ready'; s.stT=900; } }
+      else {                              // clear / extend -> next round
+        const skip=s._skip||0; s._skip=0;
+        const next=s.round+1+skip;
+        if(next>ROUNDS_TOTAL){ s.phase='won'; ev.over=true; ev.won=true; }
+        else { s.cleared++; loadRound(s,next); s.st='ready'; s.stT=900; ev.round=true; }
+      }
+    }
+    return ev;
+  }
+  s.roundMs+=dtMs;
+  if(s.freeze>0) s.freeze-=dtMs;
+  if(s.heartT>0) s.heartT-=dtMs;
+  for(let i=s.fx.length-1;i>=0;i--){ s.fx[i].t-=dtMs; if(s.fx[i].t<=0) s.fx.splice(i,1); }
+  if(!s.hurried && s.roundMs>hurryMs(s.round)){
+    s.hurried=true; s.cnt.hurry++; ev.hurry=true;
+    for(const e of s.enemies) e.angry=true;
+  }
+  const before=s.score;
+  stepPlayer(s,dt,dtMs);
+  stepBubbles(s,dt,dtMs);
+  stepEnemies(s,dt,dtMs);
+  stepShots(s,dt,dtMs);
+  stepSpecials(s,dt,dtMs);
+  stepItems(s,dt,dtMs);
+  stepSkel(s,dt,dtMs);
+  stepBoss(s,dt,dtMs);
+  stepHazards(s,dt,dtMs,ev);
+  if(s.score>before) ev.score=true;
+  if(s.st==='run'){
+    const done = s.boss ? false : (s.enemies.length===0 && !s.bubbles.some(b=>b.e>=0) && s.round!==BOSS_ROUND);
+    const bossDone = s.round===BOSS_ROUND && !s.boss;
+    if(done||bossDone){
+      s.lastSec=Math.min(29,Math.floor(s.roundMs/1000));
+      s.lastBand=s.skel?2:s.hurried?1:0;
+      // every remaining bubble becomes a 700pt bonus on the arcade's round table
+      if(s.round===1||(s.round%5===0&&s.round<=50)) for(const b of s.bubbles) dropItem(s,b.x,b.y,700,'food');
+      s.st='clear'; s.stT=1400; ev.clear=true;
+    }
+  }
+  if(s.pow.fire>0 && ev.round) s.pow.fire--;
+  return ev;
+}
+
+/* ---- headless export for VERIFY + the solvability gates ------------------- */
+const HEADLESS = (typeof document === 'undefined');
+if(HEADLESS){ module.exports = { CFG, RUN, newRun, stepGame, buildRound, rosterFor, KINDS,
+  TW, TH, TS, PW, PH, HUD_H, WORLD_H, PLAT_ROWS, ROUNDS_TOTAL, BOSS_ROUND, hurryMs,
+  POP_VALUE, DROP_VALUE, EXTEND_FOR, FOOD_TIME, GRAV, JUMP_V, RUNSPD, MAXFALL,
+  tileAt, groundUnder, wallSpan, moveBox, hasShafts, loadRound }; }
+
+/* ======================= DOM / RENDER / INPUT (browser) =================== */
+if(!HEADLESS){
+(function(){
+  const cv=document.getElementById('game'), ctx=cv.getContext('2d');
+  // the pixel-art buffer: the game's own resolution, blitted up unsmoothed
+  const world=document.createElement('canvas'); world.width=RUN.w; world.height=WORLD_H;
+  const g=world.getContext('2d'); g.imageSmoothingEnabled=false;
+  let S=3;                                    // visible device px per game px
+  cv.width=RUN.w*S; cv.height=RUN.h*S; ctx.imageSmoothingEnabled=false;
+  const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let s=newRun(), active=true, prevPhase='play';
+
+  document.body.classList.add((RUN.w/RUN.h) < 1 ? 'is-portrait' : 'is-landscape');
+  function fitCanvas(){
+    const box=cv.parentElement.getBoundingClientRect();
+    const ar=RUN.w/RUN.h; let w=box.width, h=w/ar; if(h>box.height){ h=box.height; w=h*ar; }
+    w=Math.max(80,Math.floor(w)); h=Math.max(44,Math.floor(h));
+    cv.style.width=w+'px'; cv.style.height=h+'px';
+    /* Back the canvas with REAL DEVICE PIXELS. Before this the backing store was
+       256x224 stretched by CSS to ~940 wide, so every glyph was a 9px bitmap
+       resampled by 3.7 — the blur the Founder saw on a laptop. */
+    const dpr=Math.min(3, window.devicePixelRatio||1);
+    const bw=Math.max(256,Math.round(w*dpr));
+    if(cv.width!==bw){ cv.width=bw; cv.height=Math.round(bw/ar); }
+    S=cv.width/RUN.w;
+    ctx.imageSmoothingEnabled=false;
+  }
+  addEventListener('resize',fitCanvas); fitCanvas(); setTimeout(fitCanvas,120);
+
+  const hero=new Image(); let heroOK=false, heroBox=null;
+  hero.onload=()=>{
+    /* The keyed Bot PNG is 512x512 with the bot inside a lot of empty frame.
+       Find the opaque bounding box ONCE; every draw then samples just the bot,
+       at whatever size the device asks for. */
+    try{
+      const w=hero.naturalWidth||512, h=hero.naturalHeight||512;
+      const src=document.createElement('canvas'); src.width=w; src.height=h;
+      const sc=src.getContext('2d'); sc.drawImage(hero,0,0);
+      const d=sc.getImageData(0,0,w,h).data;
+      let x0=w,y0=h,x1=-1,y1=-1;
+      for(let y=0;y<h;y++) for(let x=0;x<w;x++){ if(d[(y*w+x)*4+3]>24){
+        if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; } }
+      if(x1<0){ x0=0;y0=0;x1=w-1;y1=h-1; }
+      heroBox={x:x0,y:y0,w:x1-x0+1,h:y1-y0+1};
+      heroOK=true;
+    }catch(e){ heroOK=false; }
+  };
+  hero.src='assets/hero/bot-106.png';
+
+  let ac=null; function blip(f,d,type){ if(reduce)return; try{ ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+    const o=ac.createOscillator(),g=ac.createGain(); o.type=type||'square'; o.connect(g); g.connect(ac.destination);
+    o.frequency.value=f; g.gain.value=0.035; o.start();
+    g.gain.exponentialRampToValueAtTime(0.0001,ac.currentTime+d); o.stop(ac.currentTime+d+0.02);}catch(e){} }
+
+  const rulesO=document.getElementById('rulesOverlay'), overO=document.getElementById('overOverlay'),
+        paidO=document.getElementById('paidOverlay'), infoBtn=document.getElementById('infoBtn');
+  function openRules(){ rulesO.classList.add('show'); document.getElementById('rulesClose').focus(); }
+  function closeRules(){ rulesO.classList.remove('show'); infoBtn.focus(); }
+  infoBtn.onclick=openRules; document.getElementById('rulesClose').onclick=closeRules;
+  rulesO.addEventListener('click',e=>{ if(e.target===rulesO) closeRules(); });
+  function restart(){ s=newRun(); active=true; prevPhase='play'; overO.classList.remove('show'); paidO.classList.remove('show'); }
+  document.getElementById('restartBtn').onclick=restart;
+  function pad(n,w){ return String(n).padStart(w,'0'); }
+  function mmss(ms){ const t=Math.floor(ms/1000); return Math.floor(t/60)+':'+pad(t%60,2); }
+  function showOver(){ document.getElementById('oScore').textContent=String(s.score);
+    document.getElementById('oTime').textContent=mmss(s.timeMs); overO.classList.add('show'); document.getElementById('retryBtn').focus(); }
+  document.getElementById('retryBtn').onclick=restart;
+
+  const elScore=document.getElementById('score'), elStat1=document.getElementById('stat1'), elLives=document.getElementById('lives');
+  let livesShown=-1;
+  function syncHUD(){ if(elScore) elScore.textContent=pad(s.score,6); if(elStat1) elStat1.textContent=s.round;
+    if(elLives && s.lives!==livesShown){ livesShown=s.lives; elLives.innerHTML='';
+      for(let i=0;i<Math.min(s.lives,8);i++){ const d=document.createElement('span'); d.className='life'; elLives.appendChild(d);} } }
+
+  /* ------------------------------- art ---------------------------------- */
+  /* ------------------------------- art -----------------------------------
+     TWO SURFACES, on purpose. The pixel art is drawn on an offscreen buffer at
+     the game's own 256x200 and blitted up unsmoothed, exactly as before. The
+     TEXT and the HERO are drawn straight onto the visible canvas, whose backing
+     store now matches the real device pixels — so a 9px HUD font stopped being a
+     9px font stretched 3.7x (which is what made it blurry on a laptop) and
+     became a ~33px font rendered natively. Bot 106 gets the same treatment: at
+     256-wide he averaged into a smudge, at device resolution he is himself. */
+  const PAL={ plat:'#7a6070', platHi:'#ad93a2', platSh:'#3a2e36', wall:'#2b2028',
+              amber:'#f2a03d', blue:'#3a6ff7', mint:'#5fd6b4', cream:'#fdf3e7', red:'#e8563c' };
+  const SKIN=[ ['#7fe0b8','#d8fff1','#1d5a45'], ['#f2a03d','#ffd79a','#6b3d10'],
+               ['#5b86f7','#b9cdff','#1b2f6b'], ['#f06ec0','#ffc2e6','#6b1f4f'],
+               ['#f7d84a','#fff2a8','#6b5a0f'], ['#f2603d','#ffb79a','#6b1f10'],
+               ['#a06ef0','#dcc2ff','#3d1f6b'], ['#4fd0d8','#c2f6fa','#12555a'] ];
+  const MONO='ui-monospace,SFMono-Regular,Menlo,Consolas,monospace';
+  function px(x,y,w,h,c){ g.fillStyle=c; g.fillRect(x|0,y|0,w|0,h|0); }
+  function txt(str,x,y,size,col,align){
+    ctx.fillStyle=col; ctx.font='bold '+Math.max(8,Math.round(size*S))+'px '+MONO;
+    ctx.textAlign=align||'left'; ctx.textBaseline='alphabetic';
+    ctx.fillText(str, Math.round(x*S), Math.round(y*S)); ctx.textAlign='left';
+  }
+  /* ARCADE PARITY (researched 2026-09-25): Bubble Bobble's background tiles are
+     8x8 and every character sprite is TWO tiles wide — 16x16. This cast was
+     drawn at 12x12 (a quarter too small) while the hero was drawn at 22 (a third
+     too big), so the hero loomed almost twice the area of a bot he is supposed to
+     match. Both are 16x16 now. The 12x12 COLLISION box is unchanged and is OUR
+     calibration: the arcade's hitbox is not documented anywhere reachable, and an
+     inset box is the forgiving choice — a bot has to visibly overlap you to kill. */
+  function bot(x,y,c,hi,sh,style,dir,angry){
+    if(angry){ c=PAL.red; hi='#ffb0a0'; sh='#6b1710'; }
+    const X=x-2, Y=y-4;                       // 16x16 sprite around the 12x12 box
+    px(X+1,Y+1,14,15,'#140d12');              // keyline
+    px(X+2,Y+2,12,13,c); px(X+2,Y+2,12,3,hi); px(X+2,Y+12,12,3,sh);
+    px(X+3,Y+5,10,6,'#140d12');               // visor
+    const e=dir>0?1:0;
+    px(X+4+e,Y+6,3,3,PAL.cream); px(X+9+e,Y+6,3,3,PAL.cream);
+    if(style===0){ px(X,Y+5,2,3,sh); px(X+14,Y+5,2,3,sh); px(X+7,Y,2,2,sh); }        // cog teeth
+    if(style===1){ px(X,Y+8,2,5,sh); px(X+14,Y+8,2,5,sh); px(X+6,Y,4,2,sh); }        // lobber arms
+    if(style===2){ px(X+3,Y,10,2,hi); px(X+1,Y+15,4,1,sh); px(X+11,Y+15,4,1,sh); }   // puffer fins
+    if(style===3){ px(X+2,Y,12,2,hi); px(X+6,Y-2,4,2,hi); }                          // whirly rotor
+    if(style===4){ px(X+4,Y+15,8,1,sh); px(X+3,Y+13,10,2,c); }                       // springer coil
+    if(style===5){ px(dir>0?X+14:X,Y+7,2,4,PAL.amber); px(X+6,Y,4,2,PAL.amber); }    // blazer nozzle
+    if(style===6){ px(X+11,Y,4,4,sh); px(X+12,Y+1,2,2,hi); }                         // canner's can
+    if(style===7){ px(X,Y+6,2,6,c); px(X+14,Y+6,2,6,c); px(X+5,Y+15,6,1,sh); }       // zapper wings
+  }
+  /* THE HERO IS BOT 106 — the real Arweave art, drawn on the visible canvas at
+     device resolution from the PNG's own opaque bounding box, so he is sharp and
+     detailed instead of a 12px average of himself. A dark halo keeps him legible
+     against the cave. (Founder, 2026-09-25: "the hero needs to be Bot 106".) */
+  function drawHeroNative(x,y,dir,blow,dim){
+    const wpx=Math.round(16*S), hpx=Math.round(16*S);   // arcade parity: 16x16, same as the cast
+    ctx.save();
+    ctx.translate(Math.round((x+PW/2)*S), Math.round((y+HUD_H+PH)*S));
+    if(dir<0) ctx.scale(-1,1);
+    if(dim) ctx.globalAlpha=0.45;
+    ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+    if(heroOK && heroBox){
+      ctx.shadowColor='rgba(8,5,9,.95)'; ctx.shadowBlur=Math.max(2,Math.round(1.6*S));
+      ctx.drawImage(hero, heroBox.x,heroBox.y,heroBox.w,heroBox.h, -wpx/2, -hpx, wpx, hpx);
+      ctx.shadowBlur=0;
+    } else {                                   // PNG unavailable: a drawn stand-in
+      ctx.fillStyle=PAL.blue; ctx.fillRect(-wpx/2,-hpx,wpx,hpx);
+    }
+    ctx.imageSmoothingEnabled=false;
+    ctx.restore();
+    if(blow){ ctx.beginPath();
+      ctx.arc(Math.round((x+(dir>0?PW+4:-4))*S), Math.round((y+HUD_H+4)*S), 3.4*S, 0, 6.2832);
+      ctx.fillStyle='rgba(190,230,255,.55)'; ctx.fill(); }
+  }
+  function bubble(b,t){
+    const wob=Math.sin((t+b.ph)/300)*0.6;
+    g.beginPath(); g.arc(b.x,b.y+wob,B_R+1,0,6.2832);
+    g.fillStyle = b.sp==='water'?'rgba(80,170,255,.42)': b.sp==='light'?'rgba(250,225,70,.45)'
+                : b.sp==='fire'?'rgba(255,130,60,.45)' : b.letter?'rgba(120,255,200,.35)'
+                : b.e>=0?'rgba(255,255,255,.26)':'rgba(190,230,255,.22)';
+    g.fill(); g.strokeStyle= b.e>=0?'#fdf3e7':'#bfe9ff'; g.lineWidth=1; g.stroke();
+    if(b.e>=0){ const k=SKIN[b.e]; bot(b.x-6,b.y-4,k[0],k[1],k[2],b.e,1,false); }
+    if(b.sp==='light'){ px(b.x-1,b.y-4,2,8,'#fff3a0'); }
+    if(b.sp==='fire'){ px(b.x-2,b.y-2,4,4,'#ffca7a'); }
+  }
+  function drawCard(msg,sub){
+    ctx.fillStyle='rgba(10,6,10,.62)'; ctx.fillRect(0,HUD_H*S,RUN.w*S,WORLD_H*S);
+    const cy=RUN.h/2;
+    if(heroOK && heroBox){
+      const w=Math.round(46*S), h=Math.round(46*S);
+      ctx.save(); ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+      ctx.drawImage(hero, heroBox.x,heroBox.y,heroBox.w,heroBox.h,
+                    Math.round((RUN.w/2-92)*S), Math.round((cy-26)*S), w, h);
+      ctx.imageSmoothingEnabled=false; ctx.restore();
+    }
+    txt(msg, RUN.w/2+24, cy+2, 12, PAL.cream, 'center');
+    if(sub) txt(sub, RUN.w/2+24, cy+16, 8, PAL.amber, 'center');
+  }
+  function draw(){
+    const t=s.timeMs;
+    /* ---- 1. the world, on the pixel buffer ---- */
+    const hue=(s.round*37)%360;
+    const grd=g.createLinearGradient(0,0,0,WORLD_H);
+    grd.addColorStop(0,'hsl('+hue+',28%,14%)'); grd.addColorStop(1,'hsl('+((hue+40)%360)+',30%,7%)');
+    g.fillStyle=grd; g.fillRect(0,0,RUN.w,WORLD_H);
+    g.globalAlpha=.06; g.fillStyle=PAL.cream;
+    for(let i=0;i<26;i++){ const bx=(i*97+((s.round*13)%50))%RUN.w, by=(i*71+(t/90))%WORLD_H; g.fillRect(bx,by,1,1); }
+    g.globalAlpha=1;
+    for(let r=0;r<TH;r++) for(let c=0;c<TW;c++){ const tl=s.grid[r*TW+c]; if(!tl) continue;
+      const x=c*TS,y=r*TS;
+      if(tl===2){ px(x,y,TS,TS,PAL.wall); px(x,y,TS,1,'#3d2f38'); px(x,y+TS-1,TS,1,'#1b1319'); }
+      else { px(x,y,TS,TS,PAL.plat); px(x,y,TS,2,PAL.platHi); px(x,y+TS-2,TS,2,PAL.platSh);
+             if(s.grid[r*TW+c-1]!==1) px(x,y,1,TS,PAL.platSh);
+             if(s.grid[r*TW+c+1]!==1) px(x+TS-1,y,1,TS,PAL.platSh);
+             px(x+2,y+3,1,1,'#b79fad'); } }
+    for(const w of s.waters){ g.fillStyle='rgba(80,170,255,.55)'; g.fillRect(w.x,w.y,w.w,8); }
+    for(const f of s.flames){ g.fillStyle='rgba(255,140,50,.75)'; g.fillRect(f.x,f.y,f.w,8);
+      g.fillStyle='rgba(255,220,120,.8)'; g.fillRect(f.x,f.y,f.w,3); }
+    for(const b of s.bolts) px(b.x-8,b.y-2,16,4,'#fff3a0');
+    for(const it of s.items){ const c = it.kind==='diamond'?'#7fe0ff' : it.kind[0]==='c'?'#ffd0f0' : PAL.amber;
+      px(it.x-1,it.y-1,10,10,'#140d12'); px(it.x,it.y,8,8,c); px(it.x,it.y,8,2,'#ffffff55'); }
+    for(const p of s.shots){ const c = p.kind==='flame'||p.kind==='pfire'?'#ffb057' : p.kind==='laser'?'#a0f0ff' : '#d8c0a0';
+      px(p.x,p.y,6,6,'#140d12'); px(p.x+1,p.y+1,4,4,c); }
+    if(!s.peaceful) for(const e of s.enemies){ const k=SKIN[e.id]; bot(e.x,e.y,k[0],k[1],k[2],e.id,e.dir,e.angry); }
+    for(const b of s.bubbles) bubble(b,t);
+    if(s.boss){ const b=s.boss;
+      px(b.x-2,b.y-2,36,32,'#140d12'); px(b.x,b.y,32,28,b.hit>0?'#ffd0c0':'#8b5a7a'); px(b.x,b.y,32,5,'#c08aaa');
+      px(b.x+6,b.y+8,20,8,'#140d12'); px(b.x+9,b.y+10,4,4,PAL.cream); px(b.x+19,b.y+10,4,4,PAL.cream); }
+    if(s.skel){ const k=s.skel; px(k.x-1,k.y-1,16,14,'#140d12'); px(k.x,k.y,14,12,'#e8e4ee');
+      px(k.x+3,k.y+4,3,3,'#140d12'); px(k.x+8,k.y+4,3,3,'#140d12'); }
+
+    /* ---- 2. the visible canvas: ribbon, blit, then everything that is TEXT ---- */
+    ctx.fillStyle='#150e14'; ctx.fillRect(0,0,RUN.w*S,HUD_H*S);
+    ctx.drawImage(world, 0, Math.round(HUD_H*S), Math.round(RUN.w*S), Math.round(WORLD_H*S));
+    txt('SCORE '+pad(s.score,7), 5, 10.5, 9, PAL.cream);
+    txt('ROUND '+s.round+'/'+ROUNDS_TOTAL, 5, 20.5, 9, PAL.cream);
+    txt('BOTS '+s.lives, RUN.w-5, 10.5, 9, PAL.amber, 'right');
+    let lx=RUN.w-5;
+    for(let i=EXTEND_WORD.length-1;i>=0;i--){
+      txt(EXTEND_WORD[i], lx, 20.5, 9, s.letters[LETTERS[i]]?PAL.mint:'#4a3b45', 'right'); lx-=10; }
+    if(s.hurried && Math.floor(t/250)%2===0) txt('HURRY UP!', RUN.w/2, 20.5, 9, PAL.red, 'center');
+    if(s.boss) txt('FOREMAN '+s.boss.hp, RUN.w/2, 10.5, 9, PAL.red, 'center');
+    if(s.st!=='die' && (s.inv<=0 || Math.floor(t/80)%2===0))
+      drawHeroNative(s.px, s.py, s.dir, s.fireCd>FIRE_CD-120, false);
+    for(const f of s.fx) txt(f.txt, f.x, f.y+HUD_H-(900-f.t)/40, 8, PAL.cream, 'center');
+    if(s.st!=='run'){
+      const msg = s.st==='ready'? (s.round===BOSS_ROUND?'THE FOREMAN':'ROUND '+s.round)
+                : s.st==='die'? 'BOT DOWN' : s.st==='extend'? 'E X T E N D' : 'ROUND CLEAR';
+      const sub = s.st==='ready'? (s.round===BOSS_ROUND?'lightning only':'trap them · pop them')
+                : s.st==='extend'? 'extra bot + a free round'
+                : s.st==='clear'? 'fast clears pay better' : 'bots left: '+s.lives;
+      drawCard(msg,sub);
+    }
+  }
+
+  /* ------------------------------ input ----------------------------------
+     The cabinet is a LEFT/RIGHT stick and TWO buttons — up and down do nothing,
+     so the cross d-pad is wrong here. Movement under the left thumb, BUBBLE and
+     JUMP under the right, all as independent held-flags so you can hold a
+     direction THROUGH a jump and blow a bubble at the same time. */
+  let hl=false,hr=false,hj=false,hb=false;
+  function apply(){ if(!active){ s.inL=s.inR=s.inJump=s.inBub=false; return; }
+    s.inL=hl; s.inR=hr; s.inJump=hj; s.inBub=hb; }
+  function bind(id,set){ const el=document.getElementById(id); if(!el) return;
+    const on=e=>{e.preventDefault(); el.classList.add('on'); set(true);},
+          off=e=>{e.preventDefault(); el.classList.remove('on'); set(false);};
+    el.addEventListener('pointerdown',on); el.addEventListener('pointerup',off);
+    el.addEventListener('pointerleave',off); el.addEventListener('pointercancel',off); }
+  bind('padL',v=>hl=v); bind('padR',v=>hr=v);
+  bind('padJump',v=>hj=v); bind('padFire',v=>hb=v);
+  const L={ArrowLeft:1,a:1,A:1}, R={ArrowRight:1,d:1,D:1},
+        J={ArrowUp:1,w:1,W:1,x:1,X:1}, B={' ':1,z:1,Z:1,Control:1};
+  addEventListener('keydown',e=>{ if(e.key==='Escape'){closeRules();return;}
+    if(e.key==='r'||e.key==='R'){restart();return;} if(!active) return;
+    if(L[e.key]){hl=true;e.preventDefault();} else if(R[e.key]){hr=true;e.preventDefault();}
+    else if(J[e.key]){hj=true;e.preventDefault();} else if(B[e.key]){hb=true;e.preventDefault();} });
+  addEventListener('keyup',e=>{ if(L[e.key])hl=false; else if(R[e.key])hr=false;
+    else if(J[e.key])hj=false; else if(B[e.key])hb=false; });
+
+  function startRun(){ s=newRun(); active=true; prevPhase='play'; rulesO.classList.remove('show'); overO.classList.remove('show'); paidO.classList.remove('show'); }
+  function idleForPaid(){ s=newRun(); active=false; }
+  function resumeFree(){ s=newRun(); active=true; prevPhase='play'; overO.classList.remove('show'); }
+  window.MorriBoTEngine = { start:startRun, idle:idleForPaid, resumeFree:resumeFree, state:()=>s };
+  function endRun(){ active=false; syncHUD();
+    const res={ score:s.score, round:s.round, pops:s.pops, timeMs:s.timeMs };
+    if(window.MorriBoTPaid && MorriBoTPaid.onRunEnd && MorriBoTPaid.onRunEnd(res)) return;
+    showOver(); }
+
+  let last=performance.now(), acc=0; const TICK=1000/60;
+  function frame(now){ let dt=now-last; last=now; if(dt>200)dt=200;
+    if(active && s.phase==='play' && !rulesO.classList.contains('show')){
+      acc+=dt; let guard=0;
+      while(acc>=TICK && s.phase==='play' && guard<6){ acc-=TICK; apply(); const ev=stepGame(s,TICK);
+        if(ev.score) blip(880,0.05); if(ev.clear) blip(1240,0.18,'triangle');
+        if(ev.die) blip(150,0.25,'sawtooth'); if(ev.hurry) blip(420,0.3,'sawtooth');
+        if(ev.over) blip(110,0.4,'sawtooth'); guard++; }
+    } else { acc=0; }
+    if(s.phase!=='play' && prevPhase==='play' && (s.phase==='dead'||s.phase==='won')) endRun();
+    prevPhase=s.phase; syncHUD(); draw(); requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  try{ var _p=new URLSearchParams(location.search); if(!_p.get('phantom_action') && _p.get('src')!=='browse') openRules(); }catch(e){}
+})();
+}
+
+</script>
+
+<!-- Shared wallet libs (loaded once; the wallet LOGIC stays dead until Paid is chosen — mirrors live Mr Bot / Rush). -->
+<script src="phantom-deeplink-libs.min.js?v=20260906a"></script>
+<script src="phantom-mobile.js?v=20260906a"></script>
+<script src="solana-web3.iife.min.js?v=20260906a"></script>
+<script>
+  // NOTE: the score-memo SHAPE (buildScoreMemo + the result fields it carries: res.height/res.oil/...) is
+  // per-game — change those to your run stats. Everything else in this layer stays byte-identical.
+/* ============================================================================
+ * Bot Smash — Paid layer. MORB sink + fun leaderboard.
+ * The wallet MECHANICS below (getProvider, fetchOilBalance, buildTransferIx,
+ * buildMemoIx, confirmSignature, sendPayment, onConnect, resume) are LIFTED
+ * VERBATIM from the live Mr Bot index.html (itself lifted from Bot Merge Rush)
+ * — only CFG values, the MORB memo tag / pending key / sign marker, and the
+ * score-memo shape change. The UI glue is Bot Smash's (single-run action game).
+ * Bot Smash is real-time and UNREPLAYABLE. The leaderboard is a FUN RANKING +
+ * an OIL SINK. It is NOT verified / provably fair. Records, does not verify.
+ * ==========================================================================*/
+(function(){
+  'use strict';
+  var mode = 'free';
+  function $(id){ return document.getElementById(id); }
+
+  function lockModeToggle(lock){
+    $('modeFree').disabled = !!lock;
+    $('modePaid').disabled = !!lock;
+  }
+
+  var Paid = (function(){
+    var TEST_MODE = true;     // <-- ships TEST for Localnet proof; flip to false ONLY with Founder confirm in this run's output
+    var CFG = TEST_MODE ? {
+      RPC: 'http://127.0.0.1:8899',
+      TOKEN_PROGRAM: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+      MEMO_PROGRAM: 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr',
+      OIL_MINT: '9B5ZQifZQc3ykhnZhA9m8DFoNY5uaTwqHGNZMah6eK8Y',
+      TREASURY: '8tzZzNiGkE2kYXhUSauNEUyVHiaWBt5pBagg7CHKPNBM',
+      TREASURY_TOKEN_ACCOUNT: '3s1SQ7JZmti4PfhVsb7LCTn9q5ZhRBMaH6v2vsrVZeg6',
+      ENTRY_FEE: 25, POST_FEE: 1, DECIMALS: 2
+    } : {
+      RPC: 'https://finnbots-rpc.mart-kin1000.workers.dev',
+      TOKEN_PROGRAM: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+      MEMO_PROGRAM: 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr',
+      OIL_MINT: 'HrcfXJcFdMoLfbkN5qCTSFrLsAgJNHitmwKc5AyS7xzf',
+      TREASURY: '75WPN3kwYUT5kdPU7V3Fp3LhnxmPC38bsgBCasRQdXMR',
+      TREASURY_TOKEN_ACCOUNT: '2ZBNMLZFfHCuZm9Lfc3b7ut296tRwGtapuXad7zSm1ED',
+      ENTRY_FEE: 25, POST_FEE: 1, DECIMALS: 2
+    };
+    var MEMO_TAG = 'MORB';
+    var wallet = { pubkey:null, oil:0 };
+    var inited=false, busy=false, entrySig=null, pendingResult=null;
+    var connectBtn, walletStatus;
+
+    function $(id){ return document.getElementById(id); }
+    // ---- verbatim from Rush/Mr Bot ----
+    function getProvider(){ if(window.phantom&&window.phantom.solana&&window.phantom.solana.isPhantom) return window.phantom.solana; if(window.solana&&window.solana.isPhantom) return window.solana; return null; }
+    function shortAddr(a){ return a.slice(0,4)+'\u2026'+a.slice(-4); }
+    function setStatus(html,cls){ walletStatus.classList.remove('hidden'); walletStatus.className='wallet-status'+(cls?' '+cls:''); walletStatus.innerHTML=html; }
+    function canPlay(){ return !!wallet.pubkey && wallet.oil>=CFG.ENTRY_FEE; }
+    function delay(ms){ return new Promise(function(res){ setTimeout(res,ms); }); }
+
+    // ---- balance (verbatim from Rush/Mr Bot) -------------------------------
+    async function fetchOilBalance(owner){
+      try{ var body=JSON.stringify({ jsonrpc:'2.0', id:'oilbal', method:'getTokenAccountsByOwner', params:[ owner, { mint:CFG.OIL_MINT }, { encoding:'jsonParsed' } ] });
+        var r=await fetch(CFG.RPC,{ method:'POST', headers:{'Content-Type':'application/json'}, body:body }); if(!r.ok) return 0;
+        var j=await r.json(); var accts=j&&j.result&&j.result.value; if(!accts||!accts.length) return 0;
+        var base=0; accts.forEach(function(acc){ try{ base+=Number(acc.account.data.parsed.info.tokenAmount.amount); }catch(e){} });
+        return base/Math.pow(10,CFG.DECIMALS);
+      }catch(e){ return 0; }
+    }
+    async function checkBalance(owner){
+      wallet.oil=await fetchOilBalance(owner);
+      var pfx=TEST_MODE?'\ud83e\uddea TEST MODE \u2014 ':'';
+      if(wallet.oil>=CFG.ENTRY_FEE){ setStatus('Connected as <span class="addr">'+shortAddr(owner)+'</span><br/>'+pfx+'You hold <b>'+wallet.oil.toFixed(2)+'</b> $OIL \u2014 tap Play to enter (25 OIL).', 'ok'); }
+      else { setStatus('Connected as <span class="addr">'+shortAddr(owner)+'</span><br/>'+pfx+'This wallet holds <b>'+wallet.oil.toFixed(2)+'</b> $OIL \u2014 need at least '+CFG.ENTRY_FEE+' to play.', 'warn'); }
+      relabelStart();
+    }
+
+    // ---- payment (one signed SPL transfer + memo — verbatim from Rush/Mr Bot) ----
+    var PENDING_KEY='morb_pending_action';
+    function savePending(a){ try{ localStorage.setItem(PENDING_KEY, JSON.stringify(a)); }catch(e){} }
+    function loadPending(){ try{ var v=localStorage.getItem(PENDING_KEY); return v?JSON.parse(v):null; }catch(e){ return null; } }
+    function clearPending(){ try{ localStorage.removeItem(PENDING_KEY); }catch(e){} }
+    function PayError(msg){ this.userMessage=msg; }
+    function u64LE(amount){ var out=new Uint8Array(8); var big=BigInt(Math.round(amount)); for(var i=0;i<8;i++){ out[i]=Number(big&0xffn); big>>=8n; } return out; }
+    function buildTransferIx(src,dst,owner,amt){ var data=new Uint8Array(9); data[0]=3; data.set(u64LE(amt),1);
+      return new solanaWeb3.TransactionInstruction({ programId:new solanaWeb3.PublicKey(CFG.TOKEN_PROGRAM),
+        keys:[{pubkey:src,isSigner:false,isWritable:true},{pubkey:dst,isSigner:false,isWritable:true},{pubkey:owner,isSigner:true,isWritable:false}], data:data }); }
+    function buildMemoIx(owner,text){ return new solanaWeb3.TransactionInstruction({ programId:new solanaWeb3.PublicKey(CFG.MEMO_PROGRAM), keys:[{pubkey:owner,isSigner:true,isWritable:false}], data:new TextEncoder().encode(text) }); }
+    async function confirmSignature(connection,signature,timeoutMs){ var start=Date.now();
+      while(Date.now()-start<timeoutMs){ var res=await connection.getSignatureStatuses([signature]); var st=res&&res.value&&res.value[0];
+        if(st){ if(st.err) throw new PayError('The transaction failed on-chain \u2014 no charge was made. Please try again.'); if(st.confirmationStatus==='confirmed'||st.confirmationStatus==='finalized') return true; } await delay(1500); } return false; }
+
+    async function sendPayment(amountOil, memoText, action){
+      var provider=getProvider();
+      var useMobile=!provider && window.PhantomMobile && PhantomMobile.isMobile() && PhantomMobile.hasSession();
+      if(!provider && !useMobile) throw new PayError('Phantom isn\u2019t reachable here \u2014 open this page in your browser, or tap Connect again on mobile.');
+      var ownerPk=new solanaWeb3.PublicKey(wallet.pubkey);
+      var connection=new solanaWeb3.Connection(CFG.RPC,'confirmed');
+      var tokAccts=await connection.getTokenAccountsByOwner(ownerPk,{ mint:new solanaWeb3.PublicKey(CFG.OIL_MINT) });
+      if(!tokAccts.value.length) throw new PayError('No $OIL account found in this wallet.');
+      var sourcePubkey=tokAccts.value[0].pubkey;
+      var balInfo=await connection.getTokenAccountBalance(sourcePubkey);
+      var needBase=Math.round(amountOil*Math.pow(10,CFG.DECIMALS));
+      if(Number(balInfo.value.amount)<needBase) throw new PayError('Not enough liquid $OIL \u2014 need '+amountOil+'.');
+      var destPubkey=new solanaWeb3.PublicKey(CFG.TREASURY_TOKEN_ACCOUNT);
+      var tx=new solanaWeb3.Transaction();
+      tx.add(buildTransferIx(sourcePubkey,destPubkey,ownerPk,needBase), buildMemoIx(ownerPk,memoText));
+      tx.feePayer=ownerPk; var latest=await connection.getLatestBlockhash(); tx.recentBlockhash=latest.blockhash;
+      if(useMobile){
+        var pend={ action:action, owner:wallet.pubkey, marker:'morb_sign' };
+        if(action==='score' && pendingResult){ pend.entrySig=entrySig; pend.score=pendingResult.score; pend.height=pendingResult.height; pend.oil=pendingResult.oil; pend.timeMs=pendingResult.timeMs; }
+        savePending(pend); setStatus('Opening Phantom to approve\u2026');
+        var unsigned=tx.serialize({ requireAllSignatures:false, verifySignatures:false });
+        PhantomMobile.signTransaction(unsigned, window.location.origin+window.location.pathname, 'morb_sign'); return null;
+      }
+      var signed=await provider.signTransaction(tx); setStatus('Sending payment\u2026');
+      var rawSig=await connection.sendRawTransaction(signed.serialize(),{ skipPreflight:false }); setStatus('Payment sent \u2014 waiting for confirmation\u2026');
+      var ok=await confirmSignature(connection,rawSig,30000); if(!ok) throw new PayError('Confirmation is taking longer than expected. Signature: '+rawSig+'. Do not pay again \u2014 check it first.');
+      return rawSig; // base58 on-chain signature
+    }
+
+    // ---- score memo (MORB — no seed, no move-log, no replay; records NOT verified) ----
+    function buildScoreMemo(res){ return MEMO_TAG+'|score|sig='+String(entrySig).slice(0,32)+'|score='+res.score+'|height='+res.height+'|oil='+res.oil+'|time='+res.timeMs; }
+
+    // ---- flow glue (Bot Smash: single-run action game) ---------------------
+    function relabelStart(){
+      var b=$('paidPlayBtn'); if(!b) return;
+      b.textContent = canPlay() ? 'Play (25 OIL)' : (wallet.pubkey ? 'Need 25 OIL to play' : 'Connect wallet first');
+    }
+    function relabelStartBusy(t){ var b=$('paidPlayBtn'); if(b) b.textContent=t; }
+
+    function onEntryConfirmed(sig){ entrySig=sig; busy=false; lockModeToggle(true);
+      setStatus('Entry paid \u2014 good luck! Post your score after the run.', 'ok');
+      window.MorriBoTEngine.start(); }
+
+    // Called by the engine at game over. Returns true if this was a paid run (engine then skips its free overlay).
+    function onRunEnd(res){
+      if(mode!=='paid' || !entrySig) return false;
+      pendingResult={ score:res.score, height:res.height, oil:res.oil, timeMs:res.timeMs };
+      showRunOver(pendingResult); return true;
+    }
+    function fmtTime(ms){ var s=Math.round(ms/1000); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+
+    function showRunOver(res){
+      setStatus('Run over \u2014 post your score below to record it (1 OIL).', 'ok'); relabelStart();
+      var ov=$('paidOverlay'); ov.classList.add('show');
+      ov.innerHTML='<div class="card win"><h2>RUN OVER</h2><p>Height <b>'+res.height+'</b> \u00b7 Oil <b>'+res.oil+'</b> \u00b7 Score <b>'+res.score+'</b> \u00b7 Time <b>'+fmtTime(res.timeMs)+'</b><br/>Post it to the leaderboard (1 OIL) \u2014 a fun ranking, not verified.</p>'+
+        '<button class="btn" id="postBtn">Post score (1 OIL)</button></div>';
+      $('postBtn').addEventListener('click', onPost, { once:false });
+    }
+    async function onPost(){
+      if(busy || !pendingResult) return;
+      busy=true; var pb=$('postBtn'); if(pb){ pb.disabled=true; pb.textContent='Posting\u2026'; }
+      var memo=buildScoreMemo(pendingResult);
+      try{ var sig=await sendPayment(CFG.POST_FEE, memo, 'score'); if(sig===null) return; showPosted(pendingResult); }
+      catch(e){ setStatus('Connected as <span class="addr">'+shortAddr(wallet.pubkey||'')+'</span><br/>'+((e instanceof PayError)?e.userMessage:'Your score post didn\u2019t confirm. Nothing recorded yet \u2014 tap to retry.'), 'warn');
+        if(pb){ pb.disabled=false; pb.textContent='Retry post'; } busy=false; }
+    }
+    function showPosted(res){ pendingResult=null; entrySig=null; busy=false; lockModeToggle(false);
+      $('posted-text').innerHTML='Height <b>'+res.height+'</b> \u00b7 Oil <b>'+res.oil+'</b> \u00b7 Score <b>'+res.score+'</b> \u00b7 Time <b>'+fmtTime(res.timeMs)+'</b>. It\u2019ll appear on the leaderboard once recorded on-chain \u2014 a fun ranking, not verified.';
+      $('paidOverlay').classList.remove('show');
+      $('postedSheet').classList.add('show');
+    }
+
+    // Paid start card (idle state before entry) — mirrors Mr Bot's resetToPlay.
+    function showPaidStart(){
+      entrySig=null; pendingResult=null; busy=false; lockModeToggle(false);
+      var ov=$('paidOverlay'); ov.classList.add('show');
+      ov.innerHTML='<div class="card"><h2>BOT MORBER \u2014 PAID</h2><p>25 OIL entry \u00b7 one run (3 lives, no continues) \u00b7 fun leaderboard, not verified. Auto-bounce up the volcano, grab oil, outrun the lava \u2014 holders \u00d71.5.</p>'+
+        '<button class="btn" id="paidPlayBtn">Play (25 OIL)</button></div>';
+      $('paidPlayBtn').addEventListener('click', function(){ handleStart(); });
+      relabelStart();
+      if(wallet.pubkey) checkBalance(wallet.pubkey);
+    }
+
+    // ---- connect (desktop + mobile — verbatim from Rush/Mr Bot) ------------
+    async function onConnect(){
+      var provider=getProvider();
+      if(!provider){
+        if(window.PhantomMobile && PhantomMobile.isMobile()){
+          var inBrowse=new URLSearchParams(window.location.search).get('src')==='browse';
+          if(!inBrowse){ connectBtn.disabled=true; connectBtn.textContent='Opening in Phantom\u2026'; setStatus('Opening this game inside Phantom\u2019s browser.');
+            var target=window.location.origin+window.location.pathname+'?src=browse';
+            window.location.href='https://phantom.app/ul/browse/'+encodeURIComponent(target)+'?ref='+encodeURIComponent(window.location.origin); return; }
+          connectBtn.disabled=true; connectBtn.textContent='Opening Phantom\u2026'; setStatus('Opening Phantom \u2014 approve, then you\u2019ll come back here.');
+          PhantomMobile.connect(window.location.origin+window.location.pathname); return;
+        }
+        setStatus('Phantom isn\u2019t reachable here. Open this page in a browser with the <a href="https://phantom.app" target="_blank" rel="noopener">Phantom</a> extension.', 'warn'); return;
+      }
+      connectBtn.disabled=true; connectBtn.textContent='Connecting\u2026';
+      try{ var resp=await provider.connect(); wallet.pubkey=resp.publicKey.toString(); connectBtn.textContent='Connected';
+        setStatus('Connected as <span class="addr">'+shortAddr(wallet.pubkey)+'</span><br/>Checking your $OIL balance\u2026'); checkBalance(wallet.pubkey);
+      }catch(e){ connectBtn.disabled=false; connectBtn.textContent='Connect'; setStatus('Connection cancelled. Tap Connect to try again.', 'warn'); }
+    }
+
+    // ---- play (25 OIL entry) -----------------------------------------------
+    async function onPlay(){
+      if(busy || entrySig) return;
+      if(!canPlay()){ setStatus('Connect a wallet holding at least '+CFG.ENTRY_FEE+' $OIL to play.', 'warn'); return; }
+      busy=true; relabelStartBusy('Sending entry\u2026');
+      try{ var sig=await sendPayment(CFG.ENTRY_FEE, MEMO_TAG+'|entry', 'entry'); if(sig===null) return; onEntryConfirmed(sig); }
+      catch(e){ setStatus('Connected as <span class="addr">'+shortAddr(wallet.pubkey||'')+'</span><br/>'+((e instanceof PayError)?e.userMessage:'Something went wrong sending the entry. No confirmed charge means nothing was taken.'), 'warn');
+        busy=false; relabelStart(); }
+    }
+
+    // handleStart is the entry gate reused by the Paid start card's Play button.
+    function handleStart(){
+      if(mode!=='paid') return false;      // Free: engine runs as normal
+      if(busy || entrySig) return true;    // in-flight or a paid run already armed: block
+      if(!wallet.pubkey){ setStatus('Connect a wallet with at least '+CFG.ENTRY_FEE+' $OIL, then tap Play.', 'warn'); return true; }
+      onPlay(); return true;
+    }
+
+    function onAgain(){ $('postedSheet').classList.remove('show'); window.MorriBoTEngine.idle(); showPaidStart(); }
+
+    // ---- mobile redirect resume (verbatim from Rush/Mr Bot; carries waves/score/timeMs) --
+    async function resume(){
+      var actionParam=new URLSearchParams(window.location.search).get('phantom_action');
+      if(!actionParam){
+        if(!wallet.pubkey && window.PhantomMobile && PhantomMobile.hasSession()){ wallet.pubkey=PhantomMobile.getSessionPublicKey();
+          connectBtn.textContent='Connected'; connectBtn.disabled=true; setStatus('Connected as <span class="addr">'+shortAddr(wallet.pubkey)+'</span><br/>Checking your $OIL balance\u2026'); checkBalance(wallet.pubkey); }
+        return;
+      }
+      connectBtn.disabled=true; connectBtn.textContent='Finishing\u2026'; setStatus('Almost there \u2014 finishing up with Phantom\u2026');
+      var pending=loadPending(); var marker=pending?pending.marker:'morb_sign';
+      var result=window.PhantomMobile?PhantomMobile.consumePendingRedirect(marker):null;
+      if(result&&result.type==='connect'){ wallet.pubkey=result.publicKey; connectBtn.textContent='Connected';
+        setStatus('Connected as <span class="addr">'+shortAddr(wallet.pubkey)+'</span><br/>Checking your $OIL balance\u2026'); checkBalance(wallet.pubkey); return; }
+      if(result&&result.type==='signTransaction'&&pending){ connectBtn.textContent='Connected'; connectBtn.disabled=true; if(pending.owner) wallet.pubkey=pending.owner; clearPending();
+        try{ var connection=new solanaWeb3.Connection(CFG.RPC,'confirmed'); var rawSig=await connection.sendRawTransaction(result.txBytes,{ skipPreflight:false });
+          setStatus('Payment sent \u2014 waiting for confirmation\u2026'); var ok=await confirmSignature(connection,rawSig,30000);
+          if(!ok) throw new PayError('Confirmation slow. Signature: '+rawSig+'. Do not pay again \u2014 check it first.');
+          if(pending.action==='entry'){ onEntryConfirmed(rawSig); }
+          else if(pending.action==='score'){ pendingResult={ score:pending.score, height:pending.height, oil:pending.oil, timeMs:pending.timeMs }; showPosted(pendingResult); }
+          if(wallet.pubkey) checkBalance(wallet.pubkey);
+        }catch(e){ setStatus('Connected as <span class="addr">'+shortAddr(wallet.pubkey||'')+'</span><br/>'+((e instanceof PayError)?e.userMessage:'Something went wrong after returning from Phantom. Check your wallet activity before retrying.'), 'warn'); }
+        return;
+      }
+      connectBtn.disabled=false; connectBtn.textContent='Connect';
+      setStatus((result&&result.type==='error')?result.message:'The connection didn\u2019t complete \u2014 tap Connect to try again.', 'warn');
+    }
+
+    function init(){
+      if(inited) return; inited=true;
+      connectBtn=$('connectBtn'); walletStatus=$('walletStatus');
+      if(TEST_MODE){ $('testBanner').classList.remove('hidden'); }
+      connectBtn.addEventListener('click', onConnect);
+      $('againBtn').addEventListener('click', onAgain);
+    }
+
+    return { init:init, resume:resume, onRunEnd:onRunEnd, handleStart:handleStart,
+             showPaidStart:showPaidStart, hasSession:function(){ return window.PhantomMobile && PhantomMobile.hasSession(); } };
+  })();
+
+  window.MorriBoTPaid = Paid;
+
+  // ===== Mode switching (kid-safety: Paid is a deliberate opt-in) ============
+  var facts=$('facts');
+  var confirmSheet=$('confirmSheet');
+  var FREE_FACTS='Free \u00b7 wallet-free \u00b7 pays nothing';
+  var PAID_FACTS='Paid \u00b7 25 OIL entry \u00b7 one run \u00b7 fun leaderboard (not verified) \u00b7 holders \u00d71.5';
+
+  function setMode(m){
+    mode=m;
+    var f=$('modeFree'), p=$('modePaid');
+    if(m==='free'){
+      document.body.classList.remove('mode-paid');
+      f.classList.add('active'); p.classList.remove('active');
+      if(facts) facts.textContent=FREE_FACTS;
+    } else {
+      document.body.classList.add('mode-paid');
+      p.classList.add('active'); f.classList.remove('active');
+      if(facts) facts.textContent=PAID_FACTS;
+    }
+  }
+
+  $('modeFree').addEventListener('click', function(){ if(mode==='free') return; setMode('free'); window.MorriBoTEngine.resumeFree(); });
+  $('modePaid').addEventListener('click', function(){ if(mode==='paid') return; confirmSheet.classList.add('show'); });
+  $('confirmBack').addEventListener('click', function(){ confirmSheet.classList.remove('show'); });
+  $('confirmEnter').addEventListener('click', function(){ confirmSheet.classList.remove('show'); setMode('paid'); Paid.init(); window.MorriBoTEngine.idle(); Paid.showPaidStart(); if(Paid.hasSession && Paid.hasSession()) Paid.resume(); });
+
+  // ===== On load: Free by default. The wallet layer is only touched when returning
+  // ===== from a Phantom redirect or already inside Phantom's browser (both of which
+  // ===== can ONLY occur after the user opted into Paid). =====================
+  (function boot(){
+    var params=new URLSearchParams(window.location.search);
+    if(params.get('phantom_action') || params.get('src')==='browse'){ setMode('paid'); Paid.init(); window.MorriBoTEngine.idle(); Paid.showPaidStart(); Paid.resume(); }
+    else { setMode('free'); }
+  })();
+})();
+</script>
+<script id="fb-sticky">
+/* ==========================================================================
+   FinnBots STICKINESS LAYER — the reason a player takes one more run.
+   Founder rule, 2026-09-25: "provide a UI/UX that will support stickiness
+   with players."
+
+   SOURCE OF TRUTH. Injected by apply-device.js as <script id="fb-sticky">
+   just before </body>. It is deliberately tiny and entirely passive:
+
+     - it NEVER touches the engine, the wallet layer, the network or a wallet
+     - it reads the score the game ALREADY prints into #oScore
+     - it stores one number per game in localStorage, and nothing else
+
+   What it adds, and why each one earns its place:
+     1. A personal best you can always see.  A score with nothing to beat is a
+        number; a score next to your best is a challenge.
+     2. A run-over line that says exactly how close you came ("1,240 short" /
+        "NEW BEST +900").  The gap is what makes the next run feel winnable.
+     3. A session run counter, so a streak is visible while it is happening.
+     4. Enter / Space / Return restarts from the run-over card.  The single
+        biggest drop-off in an arcade loop is the pause between runs — the
+        fastest possible replay is the strongest retention feature there is.
+   ========================================================================== */
+(function(){
+  try{
+    var NS = 'fb:' + (location.hostname.split('.')[0] || 'game') + ':';
+    var $  = function(id){ return document.getElementById(id); };
+    var read = function(k,d){ try{ var v=localStorage.getItem(NS+k); return v==null?d:(JSON.parse(v)); }catch(e){ return d; } };
+    var save = function(k,v){ try{ localStorage.setItem(NS+k, JSON.stringify(v)); }catch(e){} };
+    var fmt  = function(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); };
+    var num  = function(t){ var n=parseInt(String(t||'').replace(/[^0-9]/g,''),10); return isFinite(n)?n:0; };
+
+    var best = num(read('best', 0)), runs = 0;
+
+    /* ---- 1. the chip, in the topbar beside the title ---- */
+    var chip = document.createElement('span');
+    chip.className = 'fb-best';
+    function paintChip(isNew){
+      chip.innerHTML = '<i>BEST</i> <b>' + fmt(best) + '</b>';
+      chip.classList.toggle('is-new', !!isNew);
+      chip.hidden = !best;
+    }
+    paintChip(false);
+    var title = document.querySelector('.topbar .title, .topbar h1, header .title');
+    if(title && title.parentNode) title.parentNode.insertBefore(chip, title.nextSibling);
+
+    /* ---- 2. the run-over line ---- */
+    var over = $('overOverlay'), card = $('overCard'), scoreEl = $('oScore');
+    if(!over || !card || !scoreEl) return;       // not a chassis run-over card: do nothing
+    var line = document.createElement('p');
+    line.className = 'fb-runline';
+    var retry = $('retryBtn');
+    if(retry && retry.parentNode) retry.parentNode.insertBefore(line, retry);
+    else card.appendChild(line);
+
+    var shown = false;
+    function onShow(){
+      var score = num(scoreEl.textContent);
+      runs++;
+      var isNew = score > best, gap = best - score;
+      if(isNew){
+        var by = score - best;
+        best = score; save('best', best);
+        line.innerHTML = '<span class="go">NEW BEST · +' + fmt(by) + '</span>' +
+                         '<small>run ' + runs + ' this session</small>';
+      } else if(best > 0){
+        line.innerHTML = '<span class="gap">' + fmt(gap) + ' short of your best</span>' +
+                         '<small>best ' + fmt(best) + ' · run ' + runs + ' this session</small>';
+      } else {
+        best = score; save('best', best);
+        line.innerHTML = '<span class="go">First run banked</span>' +
+                         '<small>beat ' + fmt(best) + ' next time</small>';
+      }
+      paintChip(isNew);
+    }
+
+    new MutationObserver(function(){
+      var on = over.classList.contains('show');
+      if(on && !shown){ shown = true; onShow(); }
+      else if(!on){ shown = false; }
+    }).observe(over, { attributes:true, attributeFilter:['class'] });
+
+    /* ---- 3. one-key replay, and the focus trap it exposed ------------------
+       Closing a dialog returns focus to the button that opened it — correct
+       accessibility, and the chassis does it. But a focused <button> then eats
+       ENTER and SPACE, so mid-game those keys re-open HOW TO PLAY instead of
+       playing: Space IS the fire key in several games, and this layer had just
+       taught players to press Enter between runs, which made a latent bug easy
+       to hit (Founder, 2026-09-25, seen on a round clear).
+
+       So: Enter/Space replay when the run-over card is up; they are left alone
+       while ANY other dialog is open, because its buttons must still work; and
+       otherwise the focused control is blurred and the key swallowed, so game
+       keys can never operate the chrome. Capture phase, because this has to run
+       before the button's own activation. */
+    var anyDialog = function(){ return !!document.querySelector('.overlay.show, .sheet.show'); };
+    addEventListener('keydown', function(e){
+      if(e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+      if(over.classList.contains('show')){
+        e.preventDefault();
+        if(retry) retry.click();
+        return;
+      }
+      if(anyDialog()) return;                       // another dialog owns the keyboard
+      var a = document.activeElement;
+      if(a && a !== document.body && /^(BUTTON|A|SUMMARY)$/.test(a.tagName)){
+        a.blur();
+        e.preventDefault();
+      }
+    }, true);
+  }catch(e){ /* stickiness must never break a game */ }
+})();
+</script>
+</body>
+</html>
