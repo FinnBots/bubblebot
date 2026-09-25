@@ -1641,7 +1641,7 @@ if(!HEADLESS){
     }
 
     // ---- score memo (BUBB — no seed, no move-log, no replay; records NOT verified) ----
-    function buildScoreMemo(res){ return MEMO_TAG+'|score|sig='+String(entrySig).slice(0,32)+'|score='+res.score+'|height='+res.height+'|oil='+res.oil+'|time='+res.timeMs; }
+    function buildScoreMemo(res){ return MEMO_TAG+'|score|sig='+String(entrySig).slice(0,32)+'|score='+res.score+'|round='+res.round+'|pops='+res.pops+'|time='+res.timeMs; }
 
     // ---- flow glue (Bot Smash: single-run action game) ---------------------
     function relabelStart(){
@@ -1657,7 +1657,7 @@ if(!HEADLESS){
     // Called by the engine at game over. Returns true if this was a paid run (engine then skips its free overlay).
     function onRunEnd(res){
       if(mode!=='paid' || !entrySig) return false;
-      pendingResult={ score:res.score, height:res.height, oil:res.oil, timeMs:res.timeMs };
+      pendingResult={ score:res.score, round:res.round, pops:res.pops, timeMs:res.timeMs };
       showRunOver(pendingResult); return true;
     }
     function fmtTime(ms){ var s=Math.round(ms/1000); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
@@ -1665,7 +1665,7 @@ if(!HEADLESS){
     function showRunOver(res){
       setStatus('Run over \u2014 post your score below to record it (1 OIL).', 'ok'); relabelStart();
       var ov=$('paidOverlay'); ov.classList.add('show');
-      ov.innerHTML='<div class="card win"><h2>RUN OVER</h2><p>Height <b>'+res.height+'</b> \u00b7 Oil <b>'+res.oil+'</b> \u00b7 Score <b>'+res.score+'</b> \u00b7 Time <b>'+fmtTime(res.timeMs)+'</b><br/>Post it to the leaderboard (1 OIL) \u2014 a fun ranking, not verified.</p>'+
+      ov.innerHTML='<div class="card win"><h2>RUN OVER</h2><p>Round <b>'+res.round+'</b> \u00b7 Pops <b>'+res.pops+'</b> \u00b7 Score <b>'+res.score+'</b> \u00b7 Time <b>'+fmtTime(res.timeMs)+'</b><br/>Post it to the leaderboard (1 OIL) \u2014 a fun ranking, not verified.</p>'+
         '<button class="btn" id="postBtn">Post score (1 OIL)</button></div>';
       $('postBtn').addEventListener('click', onPost, { once:false });
     }
@@ -1678,7 +1678,7 @@ if(!HEADLESS){
         if(pb){ pb.disabled=false; pb.textContent='Retry post'; } busy=false; }
     }
     function showPosted(res){ pendingResult=null; entrySig=null; busy=false; lockModeToggle(false);
-      $('posted-text').innerHTML='Height <b>'+res.height+'</b> \u00b7 Oil <b>'+res.oil+'</b> \u00b7 Score <b>'+res.score+'</b> \u00b7 Time <b>'+fmtTime(res.timeMs)+'</b>. It\u2019ll appear on the leaderboard once recorded on-chain \u2014 a fun ranking, not verified.';
+      $('posted-text').innerHTML='Round <b>'+res.round+'</b> \u00b7 Pops <b>'+res.pops+'</b> \u00b7 Score <b>'+res.score+'</b> \u00b7 Time <b>'+fmtTime(res.timeMs)+'</b>. It\u2019ll appear on the leaderboard once recorded on-chain \u2014 a fun ranking, not verified.';
       $('paidOverlay').classList.remove('show');
       $('postedSheet').classList.add('show');
     }
